@@ -371,6 +371,8 @@ export interface DailyVocabularyAssignment {
 export interface Preferences {
   dailyMinutes: number
   maxNewPhrases: number
+  /** Размер дневного набора «Знакомство». Отсутствует в профилях до 0.7.1 — читать как ?? 10. */
+  dailyNewWords?: number
   englishVariant: 'International' | 'UK' | 'US'
   explanationLanguage: 'English' | 'Russian'
   theme: 'dark' | 'light' | 'system'

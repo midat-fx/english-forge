@@ -30,7 +30,7 @@ function ProfileCard({ profile, disabled, onChoose }: { profile: ProfileSummary;
         <span className="grid size-12 shrink-0 place-items-center rounded-[2px] border border-border bg-recess text-lg font-bold text-primary shadow-[var(--bevel-down)]">{profile.name.trim().charAt(0).toUpperCase() || '•'}</span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold text-primary">{profile.name}</span>
-          <span className="mt-0.5 block text-xs text-muted">{profile.placementCompleted ? `Уровень ${profile.level}` : 'Диагностика не пройдена'}</span>
+          <span className="mt-0.5 block text-xs text-muted">{profile.placementCompleted ? <>Уровень <span className="numeral">{profile.level}</span></> : 'Уровень ещё не определён'}</span>
         </span>
         <ArrowRight className="size-4 shrink-0 text-muted" aria-hidden="true" />
       </button>
@@ -72,9 +72,9 @@ export function ProfilePicker({ profiles, onSelect, onCreate }: ProfilePickerPro
       <div className="w-full max-w-2xl">
         <div className="flex justify-center"><BrandMark /></div>
 
-        <p className="section-kicker mt-10 text-center">Оттиск на подпись</p>
+        <p className="section-kicker mt-10 text-center">Профили</p>
         <h1 className="mt-2 text-center text-display font-light tracking-[-0.02em]">Кто занимается?</h1>
-        <p className="mx-auto mt-4 max-w-md text-center text-sm leading-6 text-secondary">Каждый профиль хранит свой уровень и прогресс отдельно. Можно передать это приложение другу — он заведёт свой профиль и пройдёт диагностику.</p>
+        <p className="mx-auto mt-4 max-w-md text-center text-sm leading-6 text-secondary">У каждого профиля — свой уровень и прогресс.</p>
 
         <div className="mt-9 grid gap-3 sm:grid-cols-2">
           {profiles.map((profile) => (

@@ -75,7 +75,9 @@ describe('AudioRecorderPanel', () => {
     expect(onAudioReady).toHaveBeenCalledTimes(1)
     expect(onAudioReady.mock.calls[0][0]).toMatchObject({
       source: 'microphone',
-      mimeType: 'audio/webm;codecs=opus',
+      // mp4 стоит первым в MIME_PREFERENCES: WKWebView (Tauri на macOS) не умеет
+      // воспроизводить webm, поэтому дубль пишется в формат, играющий везде.
+      mimeType: 'audio/mp4',
       durationSeconds: 1,
     })
     expect(trackStop).toHaveBeenCalledOnce()
@@ -249,7 +251,7 @@ describe('AudioRecorderPanel', () => {
     const onAudioReady = vi.fn()
     render(<AudioRecorderPanel allowSystemAudio onAudioReady={onAudioReady} />)
 
-    await user.click(screen.getByRole('button', { name: /записать системный звук/i }))
+    await user.click(screen.getByRole('button', { name: /записать звук с экрана/i }))
     expect(await screen.findByText(/идёт запись/i)).toBeInTheDocument()
     expect(audioTrack.addEventListener).toHaveBeenCalledWith('ended', expect.any(Function), { once: true })
     nowMilliseconds = 1_500

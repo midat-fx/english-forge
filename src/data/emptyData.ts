@@ -3,6 +3,7 @@ import type { ForgeData } from '../domain/types'
 const defaultPreferences: ForgeData['preferences'] = {
   dailyMinutes: 20,
   maxNewPhrases: 10,
+  dailyNewWords: 10,
   englishVariant: 'International',
   explanationLanguage: 'Russian',
   theme: 'light',

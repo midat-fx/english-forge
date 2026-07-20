@@ -30,6 +30,23 @@ function wordEditDistance(actual: readonly string[], expected: readonly string[]
  */
 export const DICTATION_MATCH_RATIO = 0.85
 
+/**
+ * Пословный счёт для разбора после проверки: сколько слов на местах, сколько
+ * всего и сколько нужно для зачёта. Та же нормализация и та же дистанция, что
+ * в dictationMatches, — цифры в интерфейсе не могут разойтись с вердиктом.
+ */
+export function dictationWordScore(response: string, reference: string): { matched: number; total: number; needed: number } {
+  const actual = normalizedListeningWords(response)
+  const expected = normalizedListeningWords(reference)
+  const total = Math.max(actual.length, expected.length)
+  if (!total) return { matched: 0, total: 0, needed: 0 }
+  return {
+    matched: Math.max(0, total - wordEditDistance(actual, expected)),
+    total,
+    needed: Math.ceil(total * DICTATION_MATCH_RATIO),
+  }
+}
+
 /** Word-aligned 85% match used by both the UI and profile-import validation. */
 export function dictationMatches(response: string, reference: string): boolean {
   const actual = normalizedListeningWords(response)

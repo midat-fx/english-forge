@@ -136,9 +136,9 @@ describe('VoiceLabPage accessibility and practice modes', () => {
     await user.click(screen.getByRole('tab', { name: /слушать/i }))
 
     expect(screen.getByText('Long archived interview')).toBeInTheDocument()
-    expect(screen.getByText('карантин импорта')).toBeInTheDocument()
+    expect(screen.getByText('слишком длинный фрагмент')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('исключён из практики')
-    expect(screen.queryByRole('button', { name: 'Загрузить локальное аудио' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Загрузить аудио' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/Ваш диктант или краткие заметки/i)).not.toBeInTheDocument()
   })
 })

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { CalendarDays, Table2 } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
-import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Contents, type ContentsItem } from '../components/ui/Contents'
@@ -35,24 +34,24 @@ export function ProgressPage() {
 
   const output: ContentsItem[] = [
     { id: 'captured', folio: 'I', title: <Line label="Сохранено" detail="слов и выражений" />, value: <Figure value={metrics.captured} /> },
-    { id: 'recalls', folio: 'II', title: <Line label="Продуктивные извлечения" detail="без серьёзной помощи" />, value: <Figure value={metrics.successfulProductiveRecalls} /> },
+    { id: 'recalls', folio: 'II', title: <Line label="Вспомнили сами" detail="без подсказок" />, value: <Figure value={metrics.successfulProductiveRecalls} /> },
     { id: 'missions', folio: 'III', title: <Line label="Использовано в заданиях" detail="подтверждено вами" />, value: <Figure value={metrics.phrasesUsedInMissions} /> },
     { id: 'retained', folio: 'IV', title: <Line label="Закреплено" detail="проверено через 30+ дней" />, value: <Figure value={metrics.retained} /> },
-    { id: 'takes', folio: 'V', title: <Line label="Сохранено дублей" detail="активность, не всегда свидетельство" />, value: <Figure value={metrics.speakingAttempts} /> },
+    { id: 'takes', folio: 'V', title: <Line label="Записи речи" detail="попыток записано" />, value: <Figure value={metrics.speakingAttempts} /> },
     { id: 'minutes', folio: 'VI', title: <Line label="Время речи" detail="минут записано" />, value: <Figure value={metrics.speakingMinutes} /> },
   ]
 
   const funnel: ContentsItem[] = [
     { id: 'f-captured', folio: '1', title: <Line label="Сохранено" detail="в личной базе" />, value: <Figure value={metrics.captured} small /> },
-    { id: 'f-idle', folio: '2', title: <Line label="Ещё не активно" detail="новое, требует дополнения или набирает свидетельства" />, value: <Figure value={notActive} small /> },
-    { id: 'f-active', folio: '3', title: <Line label="Активно" detail="2 разнесённых извлечения + цикл активации" />, value: <Figure value={active} small /> },
-    { id: 'f-retained', folio: '4', title: <Line label="Закреплено" detail="новое извлечение через 30 дней" />, value: <Figure value={retained} small /> },
+    { id: 'f-idle', folio: '2', title: <Line label="Ещё в работе" detail="новое или мало повторений" />, value: <Figure value={notActive} small /> },
+    { id: 'f-active', folio: '3', title: <Line label="Отработано" detail="дважды вспомнили сами" />, value: <Figure value={active} small /> },
+    { id: 'f-retained', folio: '4', title: <Line label="Закреплено" detail="вспомнили и через 30 дней" />, value: <Figure value={retained} small /> },
   ]
 
   return <div className="space-y-8">
-    <section aria-label="Выходные данные">
+    <section aria-label="Итоги">
       <div className="mb-3 flex items-baseline justify-between gap-4 rule-double pb-2">
-        <p className="section-kicker">Выходные данные</p>
+        <p className="section-kicker">Итоги</p>
         <p className="inspector-label">на <span className="numeral">{formatShortDate(new Date(now).toISOString())}</span></p>
       </div>
       <div className="grid gap-x-10 gap-y-1 lg:grid-cols-2">
@@ -62,7 +61,7 @@ export function ProgressPage() {
     </section>
 
     <section className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-      <Card><CardHeader><div><p className="section-kicker">Свидетельства активации</p><h2 className="card-title">Активность повторений</h2></div><Button size="sm" variant="ghost" onClick={() => setShowTable((value) => !value)}><Table2 className="size-4" /> {showTable ? 'Показать график' : 'Показать таблицу'}</Button></CardHeader><CardBody>
+      <Card><CardHeader><div><p className="section-kicker">По неделям</p><h2 className="card-title">Активность повторений</h2></div><Button size="sm" variant="ghost" onClick={() => setShowTable((value) => !value)}><Table2 className="size-4" /> {showTable ? 'Показать график' : 'Показать таблицу'}</Button></CardHeader><CardBody>
         {showTable ? (
           <table className="w-full border-collapse text-left text-sm">
             <thead>
@@ -106,19 +105,19 @@ export function ProgressPage() {
             </div>
           </div>
         )}
-        <MarginNote className="mt-5 xl:max-w-none">За последние <span className="numeral">7</span> дней: <span className="numeral">{metrics.reviewedThisWeek}</span> повторений, из них <span className="numeral">{successfulThisWeek}</span> успешных извлечений.</MarginNote>
+        <MarginNote className="mt-5 xl:max-w-none">За последние <span className="numeral">7</span> дней: <span className="numeral">{metrics.reviewedThisWeek}</span> повторений, из них <span className="numeral">{successfulThisWeek}</span> успешных.</MarginNote>
       </CardBody></Card>
 
-      <Card><CardHeader><div><p className="section-kicker">Жизненный цикл выражений</p><h2 className="card-title">Сохранено → закреплено</h2></div><Badge tone="neutral">Без псевдооценки</Badge></CardHeader><CardBody className="space-y-5">
+      <Card><CardHeader><div><p className="section-kicker">Путь выражения</p><h2 className="card-title">Сохранено → закреплено</h2></div></CardHeader><CardBody className="space-y-5">
         <div className="relative pl-2">
           <span aria-hidden="true" className="absolute inset-y-3 left-0 w-px bg-border-strong" />
           <Contents items={funnel} />
         </div>
-        <p className="border-t border-border pt-4 text-xs leading-5 text-secondary"><strong className="text-primary">Активный статус</strong> требует завершённого цикла активации и двух продуктивных извлечений без помощи с интервалом не менее <span className="numeral">12</span> часов. Mission может дать одно из этих свидетельств, но не является обязательным для каждой фразы. <strong className="text-primary">Закреплённый статус</strong> требует ещё одного продуктивного извлечения без помощи не раньше чем через <span className="numeral">30</span> дней.</p>
+        <p className="border-t border-border pt-4 text-xs leading-5 text-secondary">Выражение закрепляется, когда вы дважды вспомнили его сами, а потом ещё раз — через <span className="numeral">30</span> дней.</p>
       </CardBody></Card>
     </section>
 
-    <Card><CardHeader><div><p className="section-kicker">Журнал событий</p><h2 className="card-title">Недавние свидетельства обучения</h2></div><span className="inspector-label">По сохранённым событиям</span></CardHeader>
+    <Card><CardHeader><div><p className="section-kicker">Журнал</p><h2 className="card-title">Недавние повторения</h2></div></CardHeader>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[680px] border-collapse text-left">
           <thead>
@@ -145,7 +144,7 @@ export function ProgressPage() {
       </div>
     </Card>
 
-    {spokenEvidence.length > 0 && <Card><CardHeader><div><p className="section-kicker">Свидетельства устной речи</p><h2 className="card-title">Недавние подтверждённые дубли</h2></div><span className="inspector-label">Использовано выражений: <span className="numeral">{metrics.phrasesUsedInSpeech}</span></span></CardHeader><CardBody className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{spokenEvidence.slice(0, 6).map((attempt) => <Card key={attempt.id} level="recess" className="p-4">
+    {spokenEvidence.length > 0 && <Card><CardHeader><div><p className="section-kicker">Устная речь</p><h2 className="card-title">Недавние записи</h2></div><span className="inspector-label">Использовано выражений: <span className="numeral">{metrics.phrasesUsedInSpeech}</span></span></CardHeader><CardBody className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{spokenEvidence.slice(0, 6).map((attempt) => <Card key={attempt.id} level="recess" className="p-4">
       <div className="flex items-baseline justify-between gap-3"><p className="inspector-label">{speakingModeLabel(attempt.mode)}</p><span className="numeral text-xs text-muted">{attempt.durationSeconds} с</span></div>
       <p lang="en" className="reading-en mt-2 line-clamp-2 text-xs leading-5 text-secondary">{attempt.transcript || attempt.prompt}</p>
       <p className="mt-3 text-[11px] text-muted">Целевых выражений: <span className="numeral">{speakingEvidencePhraseIds(attempt, store.phrases).length}</span> · ясность <span className="numeral">{attempt.selfRating.clarity}/5</span> · плавность <span className="numeral">{attempt.selfRating.flow}/5</span></p>

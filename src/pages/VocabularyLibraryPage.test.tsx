@@ -94,7 +94,7 @@ describe('vocabulary library daily assignment', () => {
     const wrong = within(group).getAllByRole('button').find((button) => button.textContent !== item.translationRu)!
     await user.click(wrong)
     expect(useForgeStore.getState().dailyVocabularyAssignment?.previewedIds ?? []).not.toContain(item.id)
-    expect(screen.getByRole('status')).toHaveTextContent(`Коррекция: ${item.translationRu}`)
+    expect(screen.getByRole('status')).toHaveTextContent(`Правильно: ${item.translationRu}`)
 
     await user.click(screen.getByRole('button', { name: 'Повторить без подсказки' }))
     await user.click(within(screen.getByRole('group', { name: `Значение выражения ${item.expression}` })).getByRole('button', { name: item.translationRu }))
@@ -178,7 +178,7 @@ describe('vocabulary library daily assignment', () => {
     render(<MemoryRouter><VocabularyLibraryPage /></MemoryRouter>)
     const headings = await screen.findAllByRole('heading', { name: reference.expression })
     const dailyArticle = headings.map((heading) => heading.closest('article')).find((article) => article && within(article).queryByText('Знакомство'))!
-    await user.click(within(dailyArticle).getByRole('button', { name: 'Слишком просто' }))
+    await user.click(within(dailyArticle).getByRole('button', { name: 'Уже знаю' }))
 
     await waitFor(() => expect(useForgeStore.getState().dailyVocabularyAssignment?.itemIds).not.toContain(reference.id))
     const archived = useForgeStore.getState().phrases.find((phrase) => phrase.tags.includes(catalogItemTag(reference.id)))

@@ -1,15 +1,15 @@
-# Сборка English Forge под Windows (NSIS)
+# Building English Forge for Windows (NSIS)
 
-Windows-установщик собирается только на Windows-раннере — кросс-компиляция NSIS с macOS невозможна. Ниже минимальный, воспроизводимый путь.
+The Windows installer can only be built on a Windows machine or runner — NSIS cannot be cross-compiled from macOS. Below is the minimal reproducible path.
 
-## Требования на машине сборки
+## Build-machine requirements
 
-- Windows 10 (1803+) или Windows 11.
-- Rust (stable) + target `x86_64-pc-windows-msvc`, MSVC Build Tools (VS 2022 C++ workload).
-- Node 20+ и `pnpm`.
-- WebView2 Evergreen (на Win11 предустановлен; на части Win10 — нет). Установщик собирается с `webviewInstallMode: offlineInstaller` (см. `src-tauri/tauri.conf.json`), поэтому первый запуск не требует интернета.
+- Windows 10 (1803+) or Windows 11.
+- Rust (stable) with the `x86_64-pc-windows-msvc` target and MSVC Build Tools (the VS 2022 C++ workload).
+- Node 20.19+ (or 22.12+) and `pnpm` 11.
+- WebView2 Evergreen (preinstalled on Windows 11; missing on some Windows 10 machines). The installer is built with `webviewInstallMode: offlineInstaller` (see `src-tauri/tauri.conf.json`), so the first launch does not require internet access.
 
-## Сборка
+## Build
 
 ```powershell
 pnpm install
@@ -18,17 +18,17 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --all-targets
 pnpm tauri build --bundles nsis
 ```
 
-Артефакт: `src-tauri/target/release/bundle/nsis/English Forge_0.7.0_x64-setup.exe`.
+Artifact: `src-tauri/target/release/bundle/nsis/English Forge_<version>_x64-setup.exe`.
 
-## Подпись и SmartScreen
+## Signing and SmartScreen
 
-- Сборка **не подписана** (нет code-signing сертификата). Windows SmartScreen покажет «Windows защитила ваш компьютер». Обход для пользователя: **«Подробнее» → «Выполнить в любом случае»** (аналог Control-click → Open на macOS).
-- Опционально позже: OV/EV code-signing сертификат + `signtool sign` — снимает предупреждение. Требует платного сертификата, вне текущего релиза.
+- The build is **unsigned** (no code-signing certificate). Windows SmartScreen will show "Windows protected your PC". The user bypass: **"More info" → "Run anyway"** (the Windows analogue of macOS's Open Anyway flow).
+- Optional later: an OV/EV code-signing certificate plus `signtool sign` removes the warning. It requires a paid certificate and is out of scope for the current release.
 
 ## CI
 
-`.github/workflows/release.yml` собирает оба артефакта в matrix: `macos-14` → DMG (ad-hoc), `windows-latest` → NSIS. Артефакты выкладываются в раздел Actions/Release.
+`.github/workflows/release.yml` builds both artifacts in a matrix — `macos-14` → universal DMG (ad-hoc signed), `windows-latest` → NSIS — and publishes them to the GitHub Releases page on every `v*` tag, so they can be downloaded without a GitHub account.
 
-## Известная security-дельта от macOS (не блокирует релиз)
+## Known security delta versus macOS (does not block a release)
 
-Native-слой на Unix использует `openat`/`renameat`/`unlinkat` относительно `O_NOFOLLOW`-дескриптора каталога — защита от подмены путей симлинком/TOCTOU. На Windows (`#[cfg(not(unix))]`) применяются `symlink_metadata` + повторная проверка `is_file` по хэндлу; это **однопользовательская desktop-модель** без перехода границы привилегий (доступ к `%APPDATA%` уже есть у самого пользователя). Реализовано платформо-независимо: атомарная запись через temp-файл + rename с ретраями на sharing-violation (антивирус/индексатор). Полный паритет (отклонение reparse-point каталога/файла, `FILE_FLAG_BACKUP_SEMANTICS` для fsync каталога) — задача уровня «harden», при желании добавляется позже; требует Windows-раннера для проверки компиляции.
+On Unix the native layer uses `openat`/`renameat`/`unlinkat` relative to an `O_NOFOLLOW` directory descriptor — protection against symlink/TOCTOU path swaps. On Windows (`#[cfg(not(unix))]`) it uses `symlink_metadata` plus an `is_file` re-check on the handle; this matches the **single-user desktop model** with no privilege boundary being crossed (the user already has access to `%APPDATA%`). The platform-independent parts are shared: atomic writes via a temp file plus rename with retries on sharing violations (antivirus/indexer interference). Full parity (rejecting reparse-point directories/files, `FILE_FLAG_BACKUP_SEMANTICS` for directory fsync) is hardening-level work that can be added later; it requires a Windows runner to verify compilation.

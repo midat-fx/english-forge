@@ -1,7 +1,7 @@
 {
   "name": "english-forge",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.7.1",
   "packageManager": "pnpm@11.9.0",
   "description": "A local-first English learning workbench with placement, vocabulary, grammar, review, listening, and speaking.",
   "type": "module",

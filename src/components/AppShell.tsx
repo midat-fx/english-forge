@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, BarChart3, BookOpenCheck, CircleUserRound, CloudOff, Command, Dumbbell, LayoutDashboard, LibraryBig, Menu, Mic2, Plus, Settings, X } from 'lucide-react'
+import { AlertTriangle, BarChart3, BookOpenCheck, CircleUserRound, Dumbbell, LayoutDashboard, LibraryBig, Menu, Mic2, Plus, Settings, X } from 'lucide-react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 import { useForgeStore } from '../store/useForgeStore'
@@ -20,7 +20,7 @@ const navItems = [
   { to: '/', label: 'Сегодня', icon: LayoutDashboard },
   { to: '/library', label: 'Слова и выражения', icon: LibraryBig },
   { to: '/grammar', label: 'Грамматика', icon: BookOpenCheck },
-  { to: '/practice', label: 'Практика', icon: Dumbbell },
+  { to: '/cards', label: 'Занятие', icon: Dumbbell },
   { to: '/voice', label: 'Слушать и говорить', icon: Mic2 },
   { to: '/progress', label: 'Прогресс', icon: BarChart3 },
 ]
@@ -32,7 +32,8 @@ const pageMeta: Record<string, { title: string; eyebrow: string }> = {
   '/library': { title: 'Слова и выражения', eyebrow: 'Основная библиотека' },
   '/grammar': { title: 'Грамматика', eyebrow: 'Шаг за шагом' },
   '/phrases': { title: 'Мои слова', eyebrow: 'Личная коллекция' },
-  '/practice': { title: 'Практика', eyebrow: 'Активное повторение' },
+  '/cards': { title: 'Занятие', eyebrow: 'Карточки и повторение' },
+  '/practice': { title: 'Практика', eyebrow: 'Углублённая отработка' },
   '/voice': { title: 'Слушать и говорить', eyebrow: 'Голосовая студия' },
   '/errors': { title: 'Лаборатория ошибок', eyebrow: 'Повторяющиеся паттерны' },
   '/mission': { title: 'Задание на перенос', eyebrow: 'Применение в реальной речи' },
@@ -47,7 +48,7 @@ const pageMeta: Record<string, { title: string; eyebrow: string }> = {
  * active Settings route lost the mark that every other route got. Sharing the
  * class pair makes that impossible to drift again.
  */
-const navItemClass = 'group relative flex min-h-tap items-center gap-3 rounded-[3px] px-3 text-sm font-medium text-secondary transition-colors hover:bg-elevated hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus'
+const navItemClass = 'group detent relative flex min-h-tap items-center gap-3 rounded-[3px] px-3 text-sm font-medium text-secondary hover:bg-elevated hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus'
 const navItemActiveClass = 'bg-elevated text-primary'
 
 /**
@@ -218,13 +219,13 @@ export function AppShell() {
       <nav aria-label="Основная навигация" className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => cn(navItemClass, isActive && navItemActiveClass)}>
-            {({ isActive }) => <>{isActive && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-[3px] bg-rubric" />}<Icon className={cn('size-[18px] shrink-0', isActive ? 'text-rubric' : 'text-muted group-hover:text-secondary')} /><span className="min-w-0 truncate">{label}</span>{label === 'Практика' && progress.due > 0 && <Badge tone="amber" className="ml-auto px-2 py-0.5">{progress.due}</Badge>}</>}
+            {({ isActive }) => <>{isActive && <span aria-hidden="true" className="bracket-in absolute inset-y-2 left-0 w-[3px] bg-rubric" />}<Icon className={cn('size-[18px] shrink-0', isActive ? 'text-rubric' : 'text-muted group-hover:text-secondary')} /><span className="min-w-0 truncate">{label}</span>{to === '/cards' && progress.due > 0 && <Badge tone="amber" className="ml-auto px-2 py-0.5">{progress.due}</Badge>}</>}
           </NavLink>
         ))}
       </nav>
       <div className="border-t border-border p-3 shadow-[0_-1px_0_var(--paper-hi)]">
         <NavLink to="/settings" className={({ isActive }) => cn(navItemClass, isActive && navItemActiveClass)}>
-          {({ isActive }) => <>{isActive && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-[3px] bg-rubric" />}<Settings className={cn('size-[18px] shrink-0', isActive ? 'text-rubric' : 'text-muted group-hover:text-secondary')} /><span>Настройки</span></>}
+          {({ isActive }) => <>{isActive && <span aria-hidden="true" className="bracket-in absolute inset-y-2 left-0 w-[3px] bg-rubric" />}<Settings className={cn('size-[18px] shrink-0', isActive ? 'text-rubric' : 'text-muted group-hover:text-secondary')} /><span>Настройки</span></>}
         </NavLink>
         {/* Static, exactly as before the redesign: this slip reports the route,
             it is not a profile switcher. Only the typographic register changed. */}
@@ -243,7 +244,7 @@ export function AppShell() {
     <div className="min-h-screen min-h-dvh bg-canvas text-primary">
       <a href="#main-content" className="sr-only z-50 rounded-[3px] bg-teal px-4 py-2 font-semibold text-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Перейти к основному содержимому</a>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-rail flex-col border-r border-border bg-sidebar shadow-[inset_-1px_0_0_var(--paper-hi)] lg:flex">{nav}</aside>
-      {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden"><button className="absolute inset-0 bg-black/65" aria-label="Закрыть навигацию" onClick={() => setMobileOpen(false)} /><aside ref={mobileNavRef} role="dialog" aria-modal="true" aria-label="Меню навигации" className="relative flex h-screen h-dvh w-[min(86vw,300px)] flex-col border-r border-border bg-sidebar shadow-[inset_-1px_0_0_var(--paper-hi)]">{nav}</aside></div>}
+      {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden"><button className="animate-fade-in absolute inset-0 bg-black/65" aria-label="Закрыть навигацию" onClick={() => setMobileOpen(false)} /><aside ref={mobileNavRef} role="dialog" aria-modal="true" aria-label="Меню навигации" className="drawer-in relative flex h-screen h-dvh w-[min(86vw,300px)] flex-col border-r border-border bg-sidebar shadow-[inset_-1px_0_0_var(--paper-hi)]">{nav}</aside></div>}
 
       <div className="lg:pl-rail">
         {/* Solid bg-canvas, not a translucent pane: a see-through header makes every
@@ -258,11 +259,6 @@ export function AppShell() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Badge tone="neutral" className="hidden sm:inline-flex"><CloudOff className="size-3" /> Локально</Badge>
-            <div className="numeral hidden items-center gap-1 rounded-[2px] bg-recess px-2.5 py-2 text-xs text-muted shadow-[var(--bevel-down)] lg:flex" title="Быстро добавить слово: ⌘N" aria-hidden="true"><Command className="size-3.5" /> N</div>
-            {/* The ⌘N chip beside this button is aria-hidden, so its `title` never
-                reaches assistive tech; aria-keyshortcuts carries the same hint
-                without touching the tested accessible name. */}
             <Button size="sm" className="min-w-tap" aria-label="Добавить слово" aria-keyshortcuts="Meta+N Control+N" onClick={() => setAddOpen(true)}><Plus className="size-4" /> <span className="hidden sm:inline">Добавить слово</span></Button>
           </div>
         </header>

@@ -19,9 +19,13 @@ interface UseAudioRecorderOptions {
 
 const DEFAULT_MAX_DURATION_SECONDS = 180
 export const DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+// mp4 first: WKWebView — движок Tauri на macOS — умеет и ПИСАТЬ, и ИГРАТЬ mp4,
+// и все остальные движки его тоже играют. webm остаётся запасным для старых
+// Chromium-сред разработки, но записанный webm внутри WKWebView не воспроизвести
+// вовсе: плеер молча выдаёт тишину.
 const MIME_PREFERENCES = [
-  'audio/webm;codecs=opus',
   'audio/mp4',
+  'audio/webm;codecs=opus',
   'audio/webm',
 ]
 
@@ -45,6 +49,27 @@ function selectMimeType() {
   return MIME_PREFERENCES.find((mimeType) => MediaRecorder.isTypeSupported(mimeType))
 }
 
+/** Пиковая амплитуда дубля; undefined — если движок не смог декодировать. */
+async function probeSilence(blob: Blob): Promise<number | undefined> {
+  const AudioContextConstructor = window.AudioContext
+    ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!AudioContextConstructor) return undefined
+  const audioContext = new AudioContextConstructor()
+  try {
+    const decoded = await audioContext.decodeAudioData(await blob.arrayBuffer())
+    let peak = 0
+    for (let channel = 0; channel < decoded.numberOfChannels; channel += 1) {
+      const data = decoded.getChannelData(channel)
+      for (let index = 0; index < data.length; index += 64) peak = Math.max(peak, Math.abs(data[index] ?? 0))
+    }
+    return peak
+  } catch {
+    return undefined
+  } finally {
+    if (audioContext.state !== 'closed') void audioContext.close()
+  }
+}
+
 function stopTracks(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => track.stop())
 }
@@ -63,6 +88,7 @@ export function useAudioRecorder({
   const [level, setLevel] = useState(0)
   const [error, setError] = useState<string>()
   const [capture, setCapture] = useState<LocalAudioCapture>()
+  const [warning, setWarning] = useState<string>()
   const recorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -102,6 +128,7 @@ export function useAudioRecorder({
     captureUrlRef.current = next?.url
     captureRef.current = next
     setCapture(next)
+    setWarning(undefined)
   }, [])
 
   const rejectImportedCapture = useCallback((message: string, expectedUrl?: string) => {
@@ -152,6 +179,13 @@ export function useAudioRecorder({
     setElapsedSeconds(durationSeconds)
     setStatus('ready')
     onAudioReadyRef.current?.(nextCapture)
+    // Дубль, который декодируется в тишину, — почти всегда запрет микрофона на
+    // уровне macOS, а не поломка приложения. Скажем это словами вместо немого плеера.
+    void probeSilence(blob).then((peak) => {
+      if (!mountedRef.current || peak === undefined) return
+      if (captureUrlRef.current !== nextCapture.url) return
+      if (peak < 0.01) setWarning('Похоже, в записи тишина. Проверьте доступ: Системные настройки → Конфиденциальность и безопасность → Микрофон → English Forge, затем перезапустите приложение. Если доступ уже есть — проверьте, тот ли микрофон выбран как входной.')
+    })
   }, [clearTimerAndMeter, maxUploadBytes, releaseStream, replaceCapture])
 
   const stop = useCallback(() => {
@@ -383,6 +417,7 @@ export function useAudioRecorder({
     elapsedSeconds,
     level,
     error,
+    warning,
     capture,
     start,
     startSystemAudio,

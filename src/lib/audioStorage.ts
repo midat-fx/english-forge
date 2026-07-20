@@ -114,7 +114,11 @@ export async function writeRecording(recordingId: string, blob: Blob): Promise<v
 }
 
 /** Load a local recording. The MIME type is metadata owned by the caller's profile record. */
-export async function readRecording(recordingId: string, mimeType = 'audio/webm'): Promise<Blob> {
+// Без контейнерного ярлыка по умолчанию: байты, записанные на этой машине,
+// могут быть mp4 (WKWebView) или webm (Chromium в разработке). Неверный ярлык
+// заставляет WKWebView молча отказаться декодировать, поэтому при неизвестном
+// mime отдаём блоб без типа — движок определит контейнер по сигнатуре.
+export async function readRecording(recordingId: string, mimeType = ''): Promise<Blob> {
   assertRecordingId(recordingId)
   if (!isTauri()) return readBrowserRecording(recordingId, mimeType)
   const response = await invoke<ArrayBuffer | Uint8Array | number[]>('read_recording', { recordingId })

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { ArrowLeft, ArrowRight, Check, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { BrandMark } from '../components/BrandMark'
 import { PlacementListeningPanel } from '../components/PlacementListeningPanel'
 import { Button } from '../components/ui/Button'
@@ -40,7 +40,7 @@ const AFTER_STEPS: Array<[string, string, string]> = [
 
 const INTRO_FACTS: Array<[string, string]> = [
   ['Время', '12–18 минут'],
-  ['Области', '4 области'],
+  ['Области', '4'],
   ['Диапазон', 'A2 → C1'],
 ]
 
@@ -122,9 +122,8 @@ export function PlacementPage() {
     <main className="min-h-screen min-h-dvh bg-canvas text-primary">
       {/* Колонтитул выпуска: знак слева, служебная строка справа, двойная линейка под ними. */}
       <header className="rule-double">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
+        <div className="mx-auto flex w-full max-w-6xl items-center px-5 py-5 sm:px-8">
           <BrandMark />
-          <div className="flex items-center gap-2 text-xs text-muted"><ShieldCheck className="size-4 text-verified" aria-hidden="true" /><span className="hidden sm:inline">Результат хранится только на этом Mac</span><span className="sm:hidden">Только локально</span></div>
         </div>
       </header>
 
@@ -133,7 +132,7 @@ export function PlacementPage() {
           <div>
             <p className="section-kicker">Первый шаг</p>
             <h1 className="mt-4 max-w-3xl text-display font-light tracking-[-0.02em]">Сначала определим ваш рабочий уровень английского.</h1>
-            <p className="mt-6 max-w-2xl text-lede text-secondary"><span className="numeral">32</span> коротких вопроса проверят грамматику, лексику, чтение и Use of English от A2 до C1. После основного результата можно отдельно пройти необязательный listening‑блок. Программа откроет нужные слова и уроки — без лишнего сложного материала.</p>
+            <p className="mt-6 max-w-2xl text-lede text-secondary"><span className="numeral">32</span> коротких вопроса: грамматика, лексика, чтение и Use of English. По результату программа подберёт уроки и слова вашего уровня — без лишнего сложного материала.</p>
             <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4">
               {INTRO_FACTS.map(([term, value]) => (
                 <div key={term}>
@@ -159,7 +158,7 @@ export function PlacementPage() {
                 </li>
               ))}
             </ol>
-            <p className="mt-8 border-t border-border pt-5 text-xs leading-5 text-muted">Основной результат строится по <span className="numeral">32</span> заданиям без listening, speaking и writing. После него доступен отдельный необязательный listening‑профиль; он не меняет уровень или маршрут. Диагностика не заменяет официальный экзамен CEFR.</p>
+            <p className="mt-8 border-t border-border pt-5 text-xs leading-5 text-muted">Это ориентир для программы, а не официальный экзамен на уровень.</p>
           </Card>
         </section>
       )}
@@ -169,7 +168,7 @@ export function PlacementPage() {
           {/* Колонцифра и строкомер: сколько листов набрано и сколько осталось. */}
           <div className="flex items-center justify-between gap-4">
             <span aria-live="polite" className="inspector-label">Вопрос <span className="numeral">{index + 1}</span> из <span className="numeral">{PLACEMENT_QUESTIONS.length}</span></span>
-            <Badge tone="neutral"><span className="numeral">{question.level}</span> · {question.skill.replaceAll('_', ' ')}</Badge>
+            <Badge tone="neutral"><span className="numeral">{question.level}</span> · {SKILL_LABELS[question.skill]}</Badge>
           </div>
           <Rule
             className="mt-3"
@@ -234,7 +233,7 @@ export function PlacementPage() {
               <div className="max-w-2xl">
                 <p className="section-kicker">{reopenedAttemptId ? 'Сохранённая диагностика' : 'Диагностика завершена'}</p>
                 <h1 className="mt-3 text-h1 font-light tracking-[-0.02em]">{result.foundationReview ? 'Сначала укрепим основы A2' : `Ваш рабочий диапазон: ${result.suggestedLevel}`}</h1>
-                <p className="mt-4 text-body leading-7 text-secondary">{result.foundationReview ? 'В проверенных заданиях A2 пока недостаточно уверенных ответов, поэтому начнём с основ и не будем приписывать уровень выше результата.' : `Рекомендуемый основной маршрут — ${result.suggestedLevel}. Программа начнёт с конкретных тем, где были ошибки.`} {result.weakestSkill ? <>Самый низкий результат в этой короткой выборке: <strong className="text-primary">{SKILL_LABELS[result.weakestSkill]}</strong>.</> : 'Результат одинаков по всем четырём проверенным областям; отдельный слабейший навык не назначен.'}</p>
+                <p className="mt-4 text-body leading-7 text-secondary">{result.foundationReview ? 'В заданиях A2 пока много ошибок, поэтому начнём с основ.' : `Программа поведёт вас по уровню ${result.suggestedLevel} и начнёт с тем, где были ошибки.`} {result.weakestSkill ? <>Слабее всего сейчас: <strong className="text-primary">{SKILL_LABELS[result.weakestSkill]}</strong>.</> : 'Результат ровный по всем четырём областям.'}</p>
               </div>
               <Card level="recess" className="shrink-0 px-7 py-5 text-center">
                 <p className="metric-value">{result.score}/{result.maxScore}</p>
@@ -257,7 +256,7 @@ export function PlacementPage() {
                   <p className="section-kicker">Профиль четырёх областей</p>
                   <h2 id="skill-profile-title" className="card-title">Сильные стороны и ближайший фокус</h2>
                 </div>
-                <Badge tone={result.diagnosticConfidence === 'moderate' ? 'teal' : 'amber'}>Уверенность: {result.diagnosticConfidence === 'moderate' ? 'умеренная' : 'низкая'}</Badge>
+                <Badge tone={result.diagnosticConfidence === 'moderate' ? 'teal' : 'amber'}>Точность оценки: {result.diagnosticConfidence === 'moderate' ? 'умеренная' : 'низкая'}</Badge>
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {(Object.entries(result.skillScores) as [PlacementSkill, PlacementResult['skillScores'][PlacementSkill]][]).map(([skill, score]) => (
@@ -275,10 +274,9 @@ export function PlacementPage() {
                   </Card>
                 ))}
               </div>
-              <p className="mt-4 text-xs leading-5 text-muted">Профиль основан на восьми заданиях в каждой области. Он выбирает учебный маршрут по четырём областям; необязательный listening сохраняется отдельно, а speaking и writing здесь не измеряются.</p>
             </section>
 
-            <p className="mt-8 rounded-[3px] border-l-2 border-rubric bg-recess px-5 py-4 text-sm leading-6 text-secondary shadow-[var(--bevel-down)]"><strong className="text-primary">Важно:</strong> основной результат оценивает только <span className="numeral">32</span> задания этого теста. Дополнительный listening хранится отдельно и не меняет маршрут; для полного CEFR‑профиля всё равно нужны независимые оценки listening, speaking и writing.</p>
+            <p className="mt-8 rounded-[3px] border-l-2 border-rubric bg-recess px-5 py-4 text-sm leading-6 text-secondary shadow-[var(--bevel-down)]"><strong className="text-primary">Важно:</strong> это ориентир по <span className="numeral">32</span> заданиям, а не полный CEFR‑профиль — речь, письмо и понимание на слух он не оценивает.</p>
 
             {recommendedLessonIds.length > 0 && (
               <div className="mt-6">

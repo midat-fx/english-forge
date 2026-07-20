@@ -1,5 +1,5 @@
 import { useId, useRef, type ChangeEvent } from 'react'
-import { CircleStop, FileAudio, Mic, MonitorUp, RotateCcw, ShieldCheck, Upload } from 'lucide-react'
+import { CircleStop, FileAudio, Mic, MonitorUp, RotateCcw, Upload } from 'lucide-react'
 import { useAudioRecorder, type LocalAudioCapture } from '../hooks/useAudioRecorder'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
@@ -26,7 +26,7 @@ function formatTime(seconds: number) {
 function recorderStatus(status: ReturnType<typeof useAudioRecorder>['status']) {
   if (status === 'requesting') return 'Ожидаем разрешение на запись…'
   if (status === 'recording') return 'Идёт запись. Пока ничего не сохранено.'
-  if (status === 'processing') return 'Готовим локальное прослушивание…'
+  if (status === 'processing') return 'Готовим прослушивание…'
   if (status === 'ready') return 'Аудио готово к проверке.'
   if (status === 'error') return 'Запись требует внимания.'
   return 'Готово к работе. Запись никогда не начинается автоматически.'
@@ -75,10 +75,6 @@ export function AudioRecorderPanel({
             <h2 className="card-title">{title}</h2>
             <p className="mt-1.5 max-w-2xl text-sm leading-6 text-secondary">{description}</p>
           </div>
-          <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-muted">
-            <ShieldCheck className="size-3.5 text-verified" aria-hidden="true" />
-            Локальное прослушивание
-          </span>
         </div>
       </div>
 
@@ -137,7 +133,7 @@ export function AudioRecorderPanel({
               <Upload className="size-4" aria-hidden="true" /> Импортировать аудио
             </Button>
             {allowSystemAudio && <Button type="button" variant="secondary" onClick={() => startLive('system_audio')} disabled={disabled || isRecording || busy || !recorder.isSystemAudioSupported}>
-              <MonitorUp className="size-4" aria-hidden="true" /> Записать системный звук
+              <MonitorUp className="size-4" aria-hidden="true" /> Записать звук с экрана
             </Button>}
             {recorder.capture && (
               <Button type="button" variant="ghost" onClick={handleClear} disabled={disabled || busy || isRecording}>
@@ -156,7 +152,7 @@ export function AudioRecorderPanel({
               aria-label="Импортировать аудиофайл"
             />
           </div>
-          {allowSystemAudio && <p className="mt-3 text-xs leading-5 text-muted"><MonitorUp className="mr-1.5 inline size-3.5" aria-hidden="true" />Запись системного звука начнётся только после выбора разрешённого источника в системном окне. Записывайте только тот материал, на запись которого у вас есть разрешение.</p>}
+          {allowSystemAudio && <p className="mt-3 text-xs leading-5 text-muted"><MonitorUp className="mr-1.5 inline size-3.5" aria-hidden="true" />Записывайте только материал, который вам разрешено записывать.</p>}
         </div>
 
         {/*
@@ -167,7 +163,7 @@ export function AudioRecorderPanel({
         {!recorder.isSupported && !recorder.error && (
           <div role="status" className="relative rounded-[3px] bg-recess py-3 pl-4 pr-4 text-sm leading-6 text-amber shadow-[var(--bevel-down)]">
             <span aria-hidden="true" className="absolute inset-y-3 left-0 w-[2px] bg-amber" />
-            Запись вживую не поддерживается в этой среде. Вы по-прежнему можете импортировать локальный аудиофайл.
+            Запись вживую не поддерживается в этой среде. Вы по-прежнему можете импортировать аудиофайл.
           </div>
         )}
 
@@ -179,13 +175,13 @@ export function AudioRecorderPanel({
         )}
 
         {recorder.capture && (
-          <section aria-labelledby={`${inputId}-preview`} className="rounded-[2px] border border-border bg-elevated p-4 shadow-[var(--lift-2)]">
+          <section aria-labelledby={`${inputId}-preview`} className="sheet-in rounded-[2px] border border-border bg-elevated p-4 shadow-[var(--lift-2)]">
             <div className="flex items-start gap-3">
               <FileAudio className="mt-0.5 size-5 shrink-0 text-verified" aria-hidden="true" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-col justify-between gap-1 sm:flex-row sm:items-baseline">
                   <h3 id={`${inputId}-preview`} className="text-sm font-semibold text-primary">
-                    {recorder.capture.source === 'microphone' ? 'Записанный дубль' : recorder.capture.source === 'system_audio' ? 'Записанный системный звук' : recorder.capture.fileName || 'Импортированное аудио'}
+                    {recorder.capture.source === 'microphone' ? 'Записанный дубль' : recorder.capture.source === 'system_audio' ? 'Запись звука с экрана' : recorder.capture.fileName || 'Импортированное аудио'}
                   </h3>
                   <span className="numeral text-xs text-muted">
                     {recorder.capture.durationSeconds > 0 ? formatTime(recorder.capture.durationSeconds) : 'Длительность загрузится при прослушивании'}
@@ -201,18 +197,14 @@ export function AudioRecorderPanel({
                   aria-label="Прослушивание аудиодубля"
                   className="mt-3 h-11 w-full"
                 />
+                {recorder.warning && <p className="mt-2 text-xs leading-5 text-amber">{recorder.warning}</p>}
                 <p className="mt-3 text-xs leading-5 text-secondary">
-                  Оцените ясность, плавность речи и выбор выражений. Автоматической оценки произношения нет; дубль не считается подтверждением, пока вы явно его не сохраните.
+                  Прослушайте дубль и оцените ясность речи; засчитается он только после сохранения.
                 </p>
               </div>
             </div>
           </section>
         )}
-
-        <p className="flex items-start gap-2 text-xs leading-5 text-muted">
-          <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-          Аудио остаётся только в локальном прослушивании. Текущее упражнение определяет, нужно ли и как его сохранить.
-        </p>
       </div>
     </Card>
   )

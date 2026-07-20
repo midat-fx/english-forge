@@ -1,5 +1,5 @@
 import { useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react'
-import { Check, Database, Download, Eye, FileJson, HardDrive, Keyboard, LockKeyhole, Pencil, Plus, RefreshCcw, ShieldCheck, Trash2, Upload, Users, X } from 'lucide-react'
+import { Check, Database, Download, Eye, FileJson, HardDrive, Keyboard, LockKeyhole, Pencil, Plus, RefreshCcw, Trash2, Upload, Users, X } from 'lucide-react'
 import { Badge } from '../components/ui/Badge'
 import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
@@ -31,7 +31,7 @@ export function SettingsPage() {
     setImportError('')
     setPreview(undefined)
     try {
-      if (file.size > MAX_IMPORT_BYTES) throw new Error('Импорт превышает безопасный лимит профиля 9 МБ.')
+      if (file.size > MAX_IMPORT_BYTES) throw new Error('Файл больше 9 МБ — такой импорт не поддерживается.')
       setPreview(parseForgeJson(await file.text()))
     } catch (error) { setImportError(error instanceof Error ? error.message : 'Импорт не удался.') }
   }
@@ -79,7 +79,7 @@ export function SettingsPage() {
       setPreview(undefined)
       if (fileRef.current) fileRef.current.value = ''
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : 'Не удалось атомарно сохранить импорт локально.')
+      setImportError(error instanceof Error ? error.message : 'Не удалось сохранить импорт. Текущие данные не изменены.')
     }
   }
 
@@ -91,20 +91,20 @@ export function SettingsPage() {
       else await clearAll()
       const cleanup = await Promise.allSettled(recordingIds.map((id) => deleteRecording(id)))
       const failed = cleanup.filter((result) => result.status === 'rejected').length
-      setMessage(`${mode === 'demo' ? 'Демо-профиль восстановлен.' : 'Данные профиля удалены.'}${failed ? ` Не удалось удалить аудиофайлов: ${failed}; очистка повторится при запуске.` : ' Связанное локальное аудио удалено.'}`)
+      setMessage(`${mode === 'demo' ? 'Демо-профиль восстановлен.' : 'Данные профиля удалены.'}${failed ? ` Не удалось удалить аудиофайлов: ${failed}; очистка повторится при запуске.` : ' Связанные аудиозаписи удалены.'}`)
     } catch (error) { setImportError(error instanceof Error ? error.message : 'Не удалось заменить профиль; существующие данные и аудио не изменены.') }
   }
 
   return <div className="mx-auto max-w-5xl">
     {/* КОЛОНТИТУЛ */}
-    <p className="section-kicker">Настройки выпуска</p>
+    <p className="section-kicker">Настройки</p>
     <div className="rule-double mt-3" />
 
     <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.82fr]">
       <div className="space-y-6">
         <ProfilesSection />
 
-        <Sheet folio="II" title="Учебный план" description="Настройте нагрузку без долга по повторениям.">
+        <Sheet folio="II" title="Учебный план" description="Сколько заниматься каждый день.">
           <Card level="recess" className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="inspector-label">Текущий маршрут</p>
@@ -117,11 +117,12 @@ export function SettingsPage() {
           </Card>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <NumberSetting id="daily-minutes" label="Минут на повторение" value={store.preferences.dailyMinutes} min={5} max={90} onChange={(dailyMinutes) => update({ dailyMinutes })} />
-            <NumberSetting id="max-new-phrases" label="Максимум новых в глубокий цикл" value={store.preferences.maxNewPhrases} min={0} max={10} onChange={(maxNewPhrases) => update({ maxNewPhrases })} />
+            <NumberSetting id="daily-minutes" label="Минут на повторения в день" value={store.preferences.dailyMinutes} min={5} max={90} onChange={(dailyMinutes) => update({ dailyMinutes })} />
+            <NumberSetting id="daily-new-words" label="Новых слов в день" value={store.preferences.dailyNewWords ?? 10} min={1} max={30} onChange={(dailyNewWords) => update({ dailyNewWords })} />
+            <NumberSetting id="max-new-phrases" label="Максимум новых слов в повторения за день" value={store.preferences.maxNewPhrases} min={0} max={10} onChange={(maxNewPhrases) => update({ maxNewPhrases })} />
           </div>
 
-          <MarginNote className="xl:max-w-none xl:[transform:none]">Настройка задаёт верхний предел. Фактический безопасный приём может быть ниже: приложение резервирует время для повторений по расписанию и устных повторов и ставит новые карточки на паузу при накопившемся долге.</MarginNote>
+          <MarginNote className="xl:max-w-none xl:[transform:none]">Это верхний предел: если повторений накопилось много, приложение само придержит новые слова.</MarginNote>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <SelectSetting id="english-variant" label="Вариант английского" value={store.preferences.englishVariant} onChange={(value) => update({ englishVariant: value as Preferences['englishVariant'] })}>
@@ -133,7 +134,7 @@ export function SettingsPage() {
           </div>
         </Sheet>
 
-        <Sheet folio="III" icon={<Eye className="size-4" />} title="Вид и доступность" description="Спокойный интерфейс с учётом системных настроек.">
+        <Sheet folio="III" icon={<Eye className="size-4" />} title="Вид и доступность" description="Тема и движение интерфейса.">
           {/* Сегмент клавиш с детентом: выбранная утоплена и несёт рубричную скобу. */}
           <Segment
             legend="Тема"
@@ -147,7 +148,6 @@ export function SettingsPage() {
             options={[{ value: 'off', label: 'Обычное' }, { value: 'on', label: 'Уменьшенное' }]}
             onChange={(value) => update({ reducedMotion: value === 'on' })}
           />
-          <MarginNote className="xl:max-w-none xl:[transform:none]">Убрать необязательные анимации и переходы.</MarginNote>
         </Sheet>
 
         <Sheet folio="IV" icon={<Keyboard className="size-4" />} title="Горячие клавиши" description="Главные действия доступны без поиска в меню.">
@@ -163,37 +163,18 @@ export function SettingsPage() {
       </div>
 
       <div className="space-y-6">
-        <Sheet folio="V" icon={<LockKeyhole className="size-4" />} title="ИИ и приватность" description="Эта сборка никуда не отправляет ваши учебные данные.">
-          <Card level="recess" className="px-4 py-4">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="size-4 text-verified" aria-hidden="true" />
-              <p className="label-caps text-verified">Активен локальный режим</p>
-            </div>
-            <p className="mt-2.5 text-xs leading-5 text-secondary">Тексты, контекст, ответы, ошибки и задания остаются в профиле приложения. Сетевой API не настроен.</p>
-          </Card>
-
-          <dl className="space-y-px overflow-hidden rounded-[3px] bg-border">
-            <div className="flex items-center justify-between gap-3 bg-surface px-3.5 py-3 text-sm">
-              <dt className="text-secondary">Базовая практика офлайн</dt><dd><Badge tone="positive">Доступна</Badge></dd>
-            </div>
-            <div className="flex items-center justify-between gap-3 bg-surface px-3.5 py-3 text-sm">
-              <dt className="text-secondary">Облачная автооценка</dt><dd><Badge tone="neutral">Выключена</Badge></dd>
-            </div>
-            <div className="flex items-center justify-between gap-3 bg-surface px-3.5 py-3 text-sm">
-              <dt className="text-secondary">Хранение записей</dt><dd><Badge tone="neutral">До явного удаления</Badge></dd>
-            </div>
-          </dl>
-          <MarginNote className="xl:max-w-none xl:[transform:none]">Удалите голосовую попытку или listening-клип в разделе «Слушать и говорить» либо сбросьте профиль. Автоудаления нет.</MarginNote>
+        <Sheet folio="V" icon={<LockKeyhole className="size-4" />} title="Приватность" description="Ваши данные никуда не отправляются.">
+          <p className="text-xs leading-5 text-secondary">Слова, ответы и записи голоса хранятся в вашем профиле, пока вы их не удалите — в разделе «Слушать и говорить» или сбросом профиля.</p>
         </Sheet>
 
-        <Sheet folio="VI" icon={<Database className="size-4" />} title="Данные" description="Атомарное локальное хранение, переносимые копии и никакой привязки.">
+        <Sheet folio="VI" icon={<Database className="size-4" />} title="Резервная копия" description="Сохраните прогресс в файл или восстановите его из файла.">
           <div className="grid gap-2 sm:grid-cols-2">
             <Button variant="secondary" onClick={() => void saveExport('json')}><FileJson className="size-4" aria-hidden="true" /> Экспорт JSON</Button>
             <Button variant="secondary" onClick={() => void saveExport('csv')}><Download className="size-4" aria-hidden="true" /> Экспорт CSV</Button>
           </div>
 
           <Card level="recess" className="border-l-2 border-l-amber px-4 py-3 text-xs leading-5 text-secondary">
-            <strong className="text-amber">Резервная копия только метаданных:</strong> JSON содержит историю speaking/listening и ID записей, но не сами аудиобайты. Сохраняйте локальную аудиотеку на этом Mac.
+            <strong className="text-amber">Записи голоса в копию не входят</strong> — сохраняется текст и прогресс.
           </Card>
 
           <label htmlFor="settings-profile-import" className="sr-only">Резервная копия профиля JSON</label>
@@ -206,8 +187,8 @@ export function SettingsPage() {
             <Card level="slip" className="p-4">
               <p className="section-kicker">Предпросмотр импорта</p>
               <div className="rule-double mt-2.5" />
-              <p className="numeral mt-3 text-xs leading-5 text-secondary">{preview.phrases.length} выражений · {preview.reviews.length} повторений · {preview.speakingAttempts.length} голосовых попыток · {preview.listeningAttempts.length} listening-попыток · {preview.errors.length} шаблонов ошибок · {preview.missions.length} заданий</p>
-              <p className="mt-2 text-xs leading-5 text-muted">Текущий профиль будет заменён только после подтверждения и атомарной записи. Ссылки на аудио должны уже существовать на этом устройстве.</p>
+              <p className="numeral mt-3 text-xs leading-5 text-secondary">{preview.phrases.length} выражений · {preview.reviews.length} повторений · {preview.speakingAttempts.length} устных попыток · {preview.listeningAttempts.length} попыток аудирования · {preview.errors.length} ошибок · {preview.missions.length} заданий</p>
+              <p className="mt-2 text-xs leading-5 text-muted">Текущий профиль будет заменён после подтверждения.</p>
               <div className="mt-4 flex gap-2">
                 <Button size="sm" onClick={() => void performImport()}>Подтвердить импорт</Button>
                 <Button size="sm" variant="ghost" onClick={() => setPreview(undefined)}>Отмена</Button>
@@ -220,17 +201,17 @@ export function SettingsPage() {
           <Card level="recess" className="flex items-center gap-3 px-4 py-3">
             <HardDrive className="size-5 shrink-0 text-teal" aria-hidden="true" />
             <div>
-              <p className="numeral text-sm text-primary">Схема профиля v{store.schemaVersion}</p>
-              <p className="numeral mt-1 text-xs text-muted">{store.phrases.length} выражений · {store.reviews.length} повторений · {store.speakingAttempts.length} speaking-попыток · {store.listeningAttempts.length} listening-попыток</p>
+              <p className="numeral text-sm text-primary">Профиль, версия {store.schemaVersion}</p>
+              <p className="numeral mt-1 text-xs text-muted">{store.phrases.length} выражений · {store.reviews.length} повторений · {store.speakingAttempts.length} устных попыток · {store.listeningAttempts.length} попыток аудирования</p>
             </div>
           </Card>
         </Sheet>
 
-        <Sheet folio="VII" icon={<Trash2 className="size-4" />} title="Сброс локального профиля" description="Опасная зона" danger>
-          <p className="text-xs leading-5 text-muted">Сначала экспортируйте профиль, если можете захотеть вернуть учебную историю. При любом сбросе связанное аудио удаляется.</p>
+        <Sheet folio="VII" icon={<Trash2 className="size-4" />} title="Сброс профиля" description="Опасная зона" danger>
+          <p className="text-xs leading-5 text-muted">Сначала сделайте резервную копию, если история занятий может ещё пригодиться. При сбросе удаляются и записи голоса.</p>
           <div className="grid gap-2 sm:grid-cols-2">
-            <Button variant="secondary" onClick={() => { if (window.confirm('Восстановить демо-профиль, заменить текущие данные и удалить связанное аудио?')) void replaceProfileAndClearAudio('demo') }}><RefreshCcw className="size-4" aria-hidden="true" /> Восстановить демо</Button>
-            <Button variant="danger" onClick={() => { if (window.confirm('Удалить все выражения, повторения, голосовые попытки, listening-клипы, ошибки, задания и связанные аудиофайлы?')) void replaceProfileAndClearAudio('empty') }}><Trash2 className="size-4" aria-hidden="true" /> Удалить все данные</Button>
+            <Button variant="secondary" onClick={() => { if (window.confirm('Восстановить демо-профиль? Текущие данные и записи голоса будут удалены.')) void replaceProfileAndClearAudio('demo') }}><RefreshCcw className="size-4" aria-hidden="true" /> Восстановить демо</Button>
+            <Button variant="danger" onClick={() => { if (window.confirm('Удалить все слова, повторения, записи и задания? Это действие необратимо.')) void replaceProfileAndClearAudio('empty') }}><Trash2 className="size-4" aria-hidden="true" /> Удалить все данные</Button>
           </div>
         </Sheet>
       </div>

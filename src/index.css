@@ -119,6 +119,12 @@
   /* ─── КРИВЫЕ ────────────────────────────────────────────────────────── */
   --ease-paper: cubic-bezier(0.16, 1, 0.30, 1);
   --ease-press: cubic-bezier(0.20, 0.90, 0.25, 1);
+
+  /* Дефолт всех transition-утилит: домашняя бумажная кривая.
+     Значение --ease-paper продублировано литералом: тем-токен должен быть
+     самодостаточным на этапе компиляции утилит. */
+  --default-transition-duration: 160ms;
+  --default-transition-timing-function: cubic-bezier(0.16, 1, 0.30, 1);
 }
 
 /* ══════════════════ ТЁМНАЯ ТЕМА — «ночная корректура» ══════════════════
@@ -380,6 +386,12 @@ html { scrollbar-color: var(--border-strong) transparent; } /* Firefox-путь 
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .animate-fade-in { animation: fade-in calc(160ms * var(--motion)) ease-out; }
 
+/* rise-in — младший брат sheet-in: блок «подкладывается» снизу на 4px.
+   Играет часто (вердикт ответа), поэтому короче и тише. Конечное состояние
+   строго transform: none — внутри лежит английская антиква. */
+@keyframes rise-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.rise-in { animation: rise-in calc(200ms * var(--motion)) var(--ease-paper) backwards; }
+
 /* 4. sheet-in — лист лёг. Вход маршрута и вход контента.
    БЕЗ blur (блюр на серифе даёт кашу), БЕЗ горизонтального сдвига, БЕЗ 3D.
    Обязательно `transform: none` в покое, НЕ translateZ(0): постоянный
@@ -388,10 +400,18 @@ html { scrollbar-color: var(--border-strong) transparent; } /* Firefox-путь 
 @keyframes sheet-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .sheet-in { animation: sheet-in calc(320ms * var(--motion)) var(--ease-paper) backwards; }
 
-/* Dialog needs its own keyframe: it is centred with a translate, so it must
-   NOT animate to `transform: none` the way a sheet in normal flow does. */
-@keyframes dialog-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
-.dialog-in { animation: dialog-in calc(320ms * var(--motion)) var(--ease-paper) backwards; }
+/* Центрирование диалога живёт в СВОЙСТВЕ translate — так Tailwind 4 компилирует
+   -translate-x/y-1/2 — а transform применяется ПОВЕРХ него. Кейфрейм поэтому не
+   смеет содержать собственный translate: оба сдвига складывались, диалог выезжал
+   из четверти экрана и в конце прыгал на место. Масштаб с translate композируется
+   корректно — анимируем только его и прозрачность. */
+@keyframes dialog-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+.dialog-in { animation: dialog-in calc(200ms * var(--motion)) var(--ease-paper) backwards; }
+
+/* drawer-in — мобильная навигация выезжает из-за левого края. Вход-только:
+   закрытие мгновенное, отложенного размонтирования нет по построению. */
+@keyframes drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
+.drawer-in { animation: drawer-in calc(240ms * var(--motion)) var(--ease-paper) backwards; }
 
 /* 5. card-turn — самая ценная анимация приложения: 15–30 раз за занятие.
    Лист снимают со стопки и кладут следующий. Единственное место с настоящей
@@ -418,9 +438,18 @@ html { scrollbar-color: var(--border-strong) transparent; } /* Firefox-путь 
 @keyframes typeset { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 .typeset { animation: typeset calc(300ms * var(--motion)) var(--ease-paper) backwards; }
 
+/* stamp-in — штемпель прижимается к листу. Только итоговые экраны. */
+@keyframes stamp-in { from { opacity: 0; transform: scale(1.12); } to { opacity: 1; transform: none; } }
+.stamp-in { animation: stamp-in calc(240ms * var(--motion)) var(--ease-paper) backwards; }
+
 /* Механическое «не защёлкнулось» — НЕ тревога. Амплитуда 3px, один такт. */
 @keyframes nudge { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-3px); } 70% { transform: translateX(3px); } }
 .nudge { animation: nudge calc(140ms * var(--motion)) var(--ease-press) both; }
+
+/* bracket-in — рубричная/verified-скоба вырастает от верхней кромки вниз:
+   свет сверху, чернила стекают. Transform-only, один такт. */
+@keyframes bracket-in { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.bracket-in { transform-origin: top; animation: bracket-in calc(160ms * var(--motion)) var(--ease-paper) both; }
 
 /* STAGGER — только первые 8 элементов списка. При --motion: 0 все задержки
    схлопываются в 0 арифметически. */
@@ -430,7 +459,15 @@ html { scrollbar-color: var(--border-strong) transparent; } /* Firefox-путь 
    является «движением» в вестибулярном смысле, поэтому под reduced-motion
    визуальный отклик СОХРАНЯЕТСЯ, обнуляется только длительность: убрать
    его значило бы наказать пользователя мёртвым интерфейсом. */
-.detent { transition: transform calc(90ms * var(--motion)) var(--ease-press), box-shadow calc(160ms * var(--motion)) var(--ease-paper); }
+.detent {
+  transition:
+    transform calc(90ms * var(--motion)) var(--ease-press),
+    box-shadow calc(160ms * var(--motion)) var(--ease-paper),
+    background-color calc(160ms * var(--motion)) var(--ease-paper),
+    border-color calc(160ms * var(--motion)) var(--ease-paper),
+    color calc(160ms * var(--motion)) var(--ease-paper),
+    opacity calc(160ms * var(--motion)) var(--ease-paper);
+}
 .detent:active:not(:disabled) { transform: translateY(1px); box-shadow: var(--press); }
 
 /* 2. underline — растущая чернильная линейка. ЭТО И ЕСТЬ «ПОДСВЕТКА

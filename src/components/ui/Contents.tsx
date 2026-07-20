@@ -26,23 +26,6 @@ export interface ContentsItem {
   onSelect?: () => void
 }
 
-/** A struck folio: the gesture of crossing an item off a list. Static, decorative. */
-function StruckFolio({ children }: { children: string }) {
-  return (
-    <span className="relative inline-block">
-      {children}
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 40 12"
-        preserveAspectRatio="none"
-        className="pointer-events-none absolute inset-0 h-full w-full"
-      >
-        <path d="M2 9 L38 3" stroke="var(--rubric)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      </svg>
-    </span>
-  )
-}
-
 function Row({ item }: { item: ContentsItem }) {
   const state = item.state ?? 'future'
   const inner = (
@@ -51,10 +34,12 @@ function Row({ item }: { item: ContentsItem }) {
       <span
         className={cn(
           'numeral w-[2ch] flex-none text-right text-xs',
-          state === 'done' ? 'text-muted' : state === 'current' ? 'text-rubric' : 'text-muted',
+          state === 'done'
+            ? 'text-muted line-through decoration-2 [text-decoration-color:var(--verified)]'
+            : state === 'current' ? 'text-rubric' : 'text-muted',
         )}
       >
-        {state === 'done' ? <StruckFolio>{item.folio}</StruckFolio> : item.folio}
+        {item.folio}
         {state === 'current' && <span className="sr-only">, текущий шаг</span>}
       </span>
       <span
@@ -88,7 +73,7 @@ function Row({ item }: { item: ContentsItem }) {
     <li className="relative">
       {/* The current step is the only row carrying a rubric bracket on the margin. */}
       {state === 'current' && (
-        <span aria-hidden="true" className="absolute inset-y-2 left-0 w-[3px] rounded-[1px] bg-rubric" />
+        <span aria-hidden="true" className="absolute inset-y-2 left-0 w-[3px] rounded-[2px] bg-rubric" />
       )}
       {item.to ? (
         <Link to={item.to} className={rowClass} onClick={item.onSelect}>

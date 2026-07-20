@@ -13,7 +13,7 @@ import { useForgeStore } from '../store/useForgeStore'
 
 const statusLabels: Record<ErrorPattern['status'], string> = {
   observed: 'Наблюдение',
-  active: 'Активно',
+  active: 'В работе',
   improving: 'Улучшается',
   resolved: 'Закреплено',
 }
@@ -25,7 +25,7 @@ const categoryLabels: Record<ErrorPattern['category'], string> = {
   tense_aspect: 'Время и вид',
   word_order: 'Порядок слов',
   collocation: 'Сочетаемость',
-  register: 'Регистр',
+  register: 'Стиль речи',
 }
 
 const retryHints: Record<ErrorPattern['category'], string> = {
@@ -35,7 +35,7 @@ const retryHints: Record<ErrorPattern['category'], string> = {
   tense_aspect: 'Проверьте форму глагола, время и вид.',
   word_order: 'Проверьте порядок слов во всём предложении.',
   collocation: 'Проверьте устойчивое сочетание слов.',
-  register: 'Проверьте, подходит ли выражение к этому регистру.',
+  register: 'Проверьте, подходит ли выражение к этому стилю речи.',
 }
 
 function formatRelativeDueRu(value: string, now = new Date()): string {
@@ -67,7 +67,7 @@ function localizeAddError(error?: string): string {
   if (error === 'Add both the original and corrected sentence.') return 'Добавьте исходное и исправленное предложения.'
   if (error === 'Add a distinct new-context prompt and its accepted transfer answer.') return 'Добавьте отдельное задание для нового контекста и принятый ответ.'
   if (error === 'The transfer must use a genuinely different sentence.') return 'Для переноса нужно действительно другое предложение.'
-  return 'Не удалось сохранить паттерн. Проверьте обязательные поля.'
+  return 'Не удалось сохранить. Проверьте обязательные поля.'
 }
 
 export function ErrorLabPage() {
@@ -114,9 +114,9 @@ export function ErrorLabPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <p className="section-kicker">Корректурный лист</p>
+        <p className="section-kicker">Работа над ошибками</p>
         <Button variant="secondary" aria-expanded={adding} onClick={() => setAdding((value) => !value)}>
-          <Plus className="size-4" /> Добавить личный паттерн
+          <Plus className="size-4" /> Добавить свою ошибку
         </Button>
       </div>
 
@@ -133,7 +133,7 @@ export function ErrorLabPage() {
 
       {/* Три отдельные карточки сжаты в одну врезку: вертикаль отдана работе. */}
       <Card level="recess" className="flex flex-wrap items-stretch divide-y divide-border sm:divide-x sm:divide-y-0">
-        <Tally label="Нужно внимание" value={needsAttention} detail="активные паттерны" />
+        <Tally label="Нужно внимание" value={needsAttention} detail="ждут отработки" />
         <Tally label="Улучшается" value={improving} detail="ошибки повторяются реже" />
         <Tally label="Закреплено" value={stable} detail="пройден отложенный перенос" />
       </Card>
@@ -142,10 +142,10 @@ export function ErrorLabPage() {
         <Card className="overflow-hidden">
           <CardHeader>
             <div>
-              <p className="section-kicker">Очередь паттернов</p>
-              <h2 className="card-title">Свидетельства из вашей практики</h2>
+              <p className="section-kicker">Очередь ошибок</p>
+              <h2 className="card-title">Ошибки из вашей практики</h2>
             </div>
-            <Badge tone="neutral">Паттернов: {errors.length}</Badge>
+            <Badge tone="neutral">Всего: {errors.length}</Badge>
           </CardHeader>
           {errors.length ? (
             <ol className="stagger divide-y divide-border">
@@ -154,12 +154,12 @@ export function ErrorLabPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedId(error.id)}
-                    aria-label={`Открыть паттерн: ${error.label}`}
+                    aria-label={`Открыть ошибку: ${error.label}`}
                     aria-current={selected?.id === error.id ? 'true' : undefined}
-                    className={`relative flex w-full items-baseline gap-4 px-5 py-4 text-left transition-colors hover:bg-elevated ${selected?.id === error.id ? 'bg-elevated' : ''}`}
+                    className={`detent relative flex w-full items-baseline gap-4 px-5 py-4 text-left transition-colors hover:bg-elevated ${selected?.id === error.id ? 'bg-elevated' : ''}`}
                   >
                     {selected?.id === error.id && (
-                      <span aria-hidden="true" className="absolute inset-y-3 left-0 w-[3px] rounded-[1px] bg-rubric" />
+                      <span aria-hidden="true" className="absolute inset-y-3 left-0 w-[3px] rounded-[2px] bg-rubric" />
                     )}
                     <span className="numeral w-[2.5ch] flex-none text-right text-xs text-muted">
                       {String(index + 1).padStart(2, '0')}
@@ -182,8 +182,8 @@ export function ErrorLabPage() {
           ) : (
             <CardBody className="empty-state py-16">
               <div>
-                <h2 className="text-xl font-light text-primary">Повторяющихся паттернов пока нет.</h2>
-                <p className="mt-2 text-sm text-muted">Добавьте пример из своей письменной практики, чтобы запустить цикл исправления.</p>
+                <h2 className="text-xl font-light text-primary">Повторяющихся ошибок пока нет.</h2>
+                <p className="mt-2 text-sm text-muted">Добавьте пример из своей письменной практики, чтобы начать отработку.</p>
               </div>
             </CardBody>
           )}
@@ -250,7 +250,7 @@ function ErrorWorkbench({ error, now, onAttempt, onUpdate }: { error: ErrorPatte
     if (!response.trim() || !transferReady) return
     const correct = normalizePhrase(response) === normalizePhrase(expected)
     onAttempt(response, correct, supportUsed, transferMode)
-    if (correct) { setSolved(true); setMessage(supportUsed ? 'Верно с подсказкой. Задание скоро вернётся для самостоятельной попытки.' : transferMode ? 'Отложенный перенос принят. Паттерн закреплён.' : 'Исправление принято. Две самостоятельные попытки подряд откроют отложенный новый контекст.') }
+    if (correct) { setSolved(true); setMessage(supportUsed ? 'Верно с подсказкой. Задание скоро вернётся для самостоятельной попытки.' : transferMode ? 'Отложенный перенос принят. Ошибка закреплена.' : 'Исправление принято. Две самостоятельные попытки подряд откроют отложенный новый контекст.') }
     else { setAttempts((value) => value + 1); setSupportUsed(true); setMessage(attempts === 0 ? retryHints[error.category] : 'Пока неверно. Сравните структуру и попробуйте ещё раз.'); setResponse('') }
   }
 
@@ -258,7 +258,7 @@ function ErrorWorkbench({ error, now, onAttempt, onUpdate }: { error: ErrorPatte
     <Card>
       <CardHeader>
         <div>
-          <p className="section-kicker">Мастерская самоисправления</p>
+          <p className="section-kicker">Работа над ошибкой</p>
           <h2 className="card-title">{error.label}</h2>
         </div>
         <div className="flex items-center gap-2">
@@ -268,7 +268,7 @@ function ErrorWorkbench({ error, now, onAttempt, onUpdate }: { error: ErrorPatte
             onClick={() => setEditing((value) => !value)}
             aria-label="Изменить принятый вариант"
             aria-expanded={editing}
-            className="grid size-9 place-items-center rounded-[3px] text-muted transition-colors hover:bg-elevated hover:text-primary"
+            className="detent grid size-9 place-items-center rounded-[3px] text-muted transition-colors hover:bg-elevated hover:text-primary"
           >
             <Pencil className="size-4" />
           </button>
@@ -346,7 +346,7 @@ function ErrorWorkbench({ error, now, onAttempt, onUpdate }: { error: ErrorPatte
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
-          <button type="button" onClick={() => onUpdate({ status: 'observed' })} className="flex min-h-11 items-center gap-2 text-xs font-medium text-muted transition-colors hover:text-primary">
+          <button type="button" onClick={() => onUpdate({ status: 'observed' })} className="ink-underline flex min-h-11 items-center gap-2 text-xs font-medium text-muted transition-colors hover:text-primary">
             <ShieldQuestion className="size-4" /> Зависит от контекста
           </button>
           <MarginNote className="mt-0 xl:max-w-none">Следующий перенос: {formatRelativeDueRu(error.dueAt, new Date(now))}</MarginNote>
@@ -366,7 +366,7 @@ function AddErrorForm({ onAdd, onCancel }: { onAdd: (input: { label: string; cat
   const [transferAnswer, setTransferAnswer] = useState('')
   const [message, setMessage] = useState('')
   function save() {
-    const result = onAdd({ label: label.trim() || 'Личный грамматический паттерн', category, original, correction, rule, transferPrompt, transferAnswer, hint: rule || 'Сравните структуру и попробуйте ещё раз.' })
+    const result = onAdd({ label: label.trim() || 'Моя повторяющаяся ошибка', category, original, correction, rule, transferPrompt, transferAnswer, hint: rule || 'Сравните структуру и попробуйте ещё раз.' })
     if (result.error) setMessage(localizeAddError(result.error))
     else if (result.duplicateId) setMessage('Это исходное предложение уже отслеживается.')
   }
@@ -374,12 +374,12 @@ function AddErrorForm({ onAdd, onCancel }: { onAdd: (input: { label: string; cat
     <Card level="slip">
       <CardHeader>
         <div>
-          <p className="section-kicker">Личные свидетельства</p>
-          <h2 className="card-title">Добавьте повторяющийся паттерн</h2>
+          <p className="section-kicker">Из вашей практики</p>
+          <h2 className="card-title">Добавьте повторяющуюся ошибку</h2>
         </div>
       </CardHeader>
       <CardBody className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-medium text-primary">Название паттерна<Input className="mt-2" value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Например, предлог после depend" /></label>
+        <label className="text-sm font-medium text-primary">Название ошибки<Input className="mt-2" value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Например, предлог после depend" /></label>
         <label className="text-sm font-medium text-primary">Категория<Select className="mt-2" value={category} onChange={(event) => setCategory(event.target.value as ErrorPattern['category'])}>{Object.entries(categoryLabels).map(([value, text]) => <option key={value} value={value}>{text}</option>)}</Select></label>
         <label className="text-sm font-medium text-primary">Исходное предложение<Textarea lang="en" className="reading-en mt-2" value={original} onChange={(event) => setOriginal(event.target.value)} /></label>
         <label className="text-sm font-medium text-primary">Принятый исправленный вариант<Textarea lang="en" className="reading-en mt-2" value={correction} onChange={(event) => setCorrection(event.target.value)} /></label>
@@ -387,7 +387,7 @@ function AddErrorForm({ onAdd, onCancel }: { onAdd: (input: { label: string; cat
         <label className="text-sm font-medium text-primary">Задание в новом контексте<Textarea lang="en" className="reading-en mt-2" value={transferPrompt} onChange={(event) => setTransferPrompt(event.target.value)} placeholder="Другое предложение, которое проверяет то же правило" /></label>
         <label className="text-sm font-medium text-primary">Принятый ответ для переноса<Textarea lang="en" className="reading-en mt-2" value={transferAnswer} onChange={(event) => setTransferAnswer(event.target.value)} placeholder="Исправленное предложение в новом контексте" /></label>
         {message && <p role="alert" className="rounded-[3px] border border-amber/30 bg-amber/10 p-3 text-sm text-amber sm:col-span-2">{message}</p>}
-        <div className="flex justify-end gap-2 sm:col-span-2"><Button variant="ghost" onClick={onCancel}>Отмена</Button><Button onClick={save}>Сохранить паттерн</Button></div>
+        <div className="flex justify-end gap-2 sm:col-span-2"><Button variant="ghost" onClick={onCancel}>Отмена</Button><Button onClick={save}>Сохранить ошибку</Button></div>
       </CardBody>
     </Card>
   )

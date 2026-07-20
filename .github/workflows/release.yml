@@ -99,35 +99,34 @@ jobs:
           draft: false
           generate_release_notes: true
           body: |
-            Приложение работает полностью локально: ни аккаунта, ни интернета
-            не нужно. Все данные остаются на вашем компьютере.
+            English Forge runs fully offline: no account, no cloud. All data
+            stays on your computer.
 
             ## macOS
 
-            Скачайте `.dmg`, откройте, перетащите **English Forge** в «Программы».
+            Download the `.dmg`, open it, and drag **English Forge** into
+            Applications.
 
-            При первом запуске macOS покажет окно **«Файл English Forge не был
-            открыт»**. Нажмите **«Готово»** — не «Переместить в Корзину».
+            On first launch macOS will show **"English Forge was not opened"**.
+            Click **Done** — not "Move to Trash". Then open **System Settings →
+            Privacy & Security**, scroll to the **Security** section, and click
+            **Open Anyway**. Confirm with your password, launch the app again,
+            and choose **Open**. This is needed once.
 
-            Затем откройте **Системные настройки** → **Конфиденциальность и
-            безопасность**, прокрутите вниз до раздела **«Безопасность»**: там
-            появится кнопка **«Открыть всё равно»**. Нажмите её, подтвердите
-            паролем, запустите приложение и выберите **«Открыть»**. Это нужно
-            один раз.
+            > On macOS 15 Sequoia and later the old right-click → Open bypass no
+            > longer exists; the System Settings route is the only one.
 
-            > На macOS 15 Sequoia и новее способ «правый клик → Открыть» больше
-            > не работает: Apple убрала этот обход.
-
-            Сборка universal — и Apple Silicon, и Intel.
+            The build is universal — Apple Silicon and Intel.
 
             ## Windows
 
-            Скачайте `.exe`, запустите. SmartScreen покажет синее окно:
-            **Подробнее** → **Выполнить в любом случае**. Тоже один раз.
+            Download the `.exe` and run it. SmartScreen will show a blue window:
+            click **More info**, then **Run anyway**. Also needed once.
 
-            ## Почему система ругается
+            ## Why the warnings appear
 
-            Установщики не подписаны платными сертификатами разработчика.
-            Это единственная причина предупреждений — они появляются у любого
-            неподписанного приложения и ничего не говорят о содержимом файла.
-            Исходный код открыт, сборку можно повторить у себя.
+            The installers are not signed with paid developer certificates.
+            That is the only reason for the warnings — they appear for any
+            unsigned app and say nothing about the file itself. The source code
+            is open in this repository, so the build can be reproduced and
+            compared.

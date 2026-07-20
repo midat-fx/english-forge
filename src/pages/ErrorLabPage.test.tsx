@@ -21,7 +21,7 @@ describe('ErrorLabPage localization and due gate', () => {
     render(<ErrorLabPage />)
 
     expect(screen.getByText('Нужно внимание')).toBeInTheDocument()
-    expect(screen.getByText('Свидетельства из вашей практики')).toBeInTheDocument()
+    expect(screen.getByText('Ошибки из вашей практики')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Изменить принятый вариант' })).toBeInTheDocument()
     expect(screen.getAllByText('It depends from the context.').every((node) => node.getAttribute('lang') === 'en')).toBe(true)
 
@@ -32,7 +32,7 @@ describe('ErrorLabPage localization and due gate', () => {
     await user.click(screen.getByRole('button', { name: 'Изменить принятый вариант' }))
     expect(screen.getByLabelText('Принятый вариант')).toHaveAttribute('lang', 'en')
 
-    await user.click(screen.getByRole('button', { name: /Открыть паттерн: Verb form after/ }))
+    await user.click(screen.getByRole('button', { name: /Открыть ошибку: Verb form after/ }))
     expect(screen.getByLabelText('Ваш исправленный вариант')).toBeDisabled()
     expect(screen.getByText(/Перенос откроется завтра/)).toBeInTheDocument()
   })
@@ -41,7 +41,7 @@ describe('ErrorLabPage localization and due gate', () => {
     const user = userEvent.setup()
     render(<ErrorLabPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Добавить личный паттерн' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить свою ошибку' }))
 
     const original = screen.getByLabelText('Исходное предложение')
     const correction = screen.getByLabelText('Принятый исправленный вариант')
@@ -49,12 +49,12 @@ describe('ErrorLabPage localization and due gate', () => {
     const transferAnswer = screen.getByLabelText('Принятый ответ для переноса')
     for (const field of [original, correction, transferPrompt, transferAnswer]) expect(field).toHaveAttribute('lang', 'en')
 
-    await user.click(screen.getByRole('button', { name: 'Сохранить паттерн' }))
+    await user.click(screen.getByRole('button', { name: 'Сохранить ошибку' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Добавьте исходное и исправленное предложения.')
 
     await user.type(original, 'I depend from this result.')
     await user.type(correction, 'I depend on this result.')
-    await user.click(screen.getByRole('button', { name: 'Сохранить паттерн' }))
+    await user.click(screen.getByRole('button', { name: 'Сохранить ошибку' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Добавьте отдельное задание для нового контекста и принятый ответ.')
   })
 

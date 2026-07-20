@@ -195,6 +195,7 @@ const missionSchema = z.object({
 const preferencesV1Schema = z.object({
   dailyMinutes: z.number().int().min(5).max(90),
   maxNewPhrases: z.number().int().min(0).max(20),
+  dailyNewWords: z.number().int().min(1).max(30).optional(),
   englishVariant: z.enum(['International', 'UK', 'US']),
   explanationLanguage: z.enum(['English', 'Russian']),
   theme: z.enum(['dark', 'light', 'system']),

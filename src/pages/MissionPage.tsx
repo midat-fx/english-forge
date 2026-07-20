@@ -172,13 +172,13 @@ export function MissionPage() {
         <Badge tone="amber">Сохранённый черновик</Badge>
         <div>
           <h2 className="text-h2 font-light tracking-tight text-primary">Старое задание сохранено только для чтения.</h2>
-          <p className="mt-2 text-sm leading-6 text-secondary">Его условия больше не соответствуют текущему уровню или карточкам. Текст не удалён и не засчитывается как новое учебное свидетельство.</p>
+          <p className="mt-2 text-sm leading-6 text-secondary">Его условия больше не соответствуют текущему уровню или карточкам. Текст не удалён и не засчитывается как новое подтверждение практики.</p>
         </div>
         <div className="rounded-[3px] bg-recess p-4 shadow-[var(--bevel-down)]">
           <p className="text-sm font-semibold text-primary">{quarantinedDraft.title}</p>
           <p lang="en" className="reading-en reading-en-block mt-3 whitespace-pre-wrap text-sm text-secondary">{quarantinedDraft.draft || 'Черновик был пуст.'}</p>
         </div>
-        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+        {error && <p role="alert" className="text-sm text-amber">{error}</p>}
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => { if (!createSuggestedMission()) setError('Сначала изучите нужное количество выражений текущего уровня.') }}>Создать новое задание уровня {currentLevel}</Button>
           <Button variant="secondary" onClick={() => { if (window.confirm('Удалить этот сохранённый черновик без возможности восстановления?')) deleteMission(quarantinedDraft.id) }}><Trash2 className="size-4" /> Удалить черновик</Button>
@@ -194,7 +194,7 @@ export function MissionPage() {
         <div>
           <h2 className="text-h2 font-light tracking-tight text-primary">Задание на перенос пока не создано.</h2>
           <p className="mt-2 text-sm text-muted">Сначала выполните практический шаг минимум с {requirements.minTargetPhrases} {requirements.minTargetPhrases === 1 ? 'выражением' : 'выражениями'} уровня {currentLevel}, затем создайте задание.</p>
-          {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
+          {error && <p role="alert" className="mt-2 text-sm text-amber">{error}</p>}
         </div>
         <Button onClick={() => { if (!createSuggestedMission()) setError('Сначала изучите нужное количество выражений текущего уровня.') }}>Создать задание</Button>
       </CardBody>
@@ -276,17 +276,17 @@ export function MissionPage() {
             <input type="checkbox" className="mt-0.5 size-5 accent-[var(--color-verified)]" checked={selfConfirmed} onChange={(event) => setSelfConfirmed(event.target.checked)} />
             <span>Я перечитал(а) ответ: он осмысленный и завершённый, а целевые выражения использованы естественно в новом контексте.</span>
           </label>
-          {error && <p id="mission-error" role="alert" className="text-sm text-danger">{error}</p>}
+          {error && <p id="mission-error" role="alert" className="text-sm text-amber">{error}</p>}
 
           <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="max-w-xl text-xs leading-5 text-muted">Целевые формы скрыты до завершения. Засчитываются только выражения, которые приложение действительно находит в тексте; это одно продуктивное свидетельство, а не автоматическое освоение.</p>
+            <p className="max-w-xl text-xs leading-5 text-muted">Целевые формы скрыты до завершения. Засчитываются только выражения, найденные в вашем тексте.</p>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={() => { if (window.confirm('Удалить это задание и его черновик без возможности восстановления?')) deleteMission(mission.id) }}><Trash2 className="size-4" /> Удалить</Button>
               <Button onClick={finish}>Завершить задание <Check className="size-4" /></Button>
             </div>
           </div>
           <MarginNote className="flex items-center gap-1.5 xl:mt-2 xl:max-w-none xl:[transform:none]">
-            <ShieldCheck className="size-3.5 text-teal" aria-hidden="true" /> Черновик сохранён локально
+            <ShieldCheck className="size-3.5 text-teal" aria-hidden="true" /> Черновик сохраняется автоматически
           </MarginNote>
         </CardBody>
       </Card>
@@ -373,7 +373,7 @@ export function MissionPage() {
               <CardHeader>
                 <div>
                   <p className="section-kicker">Грамматический фокус</p>
-                  <h2 className="card-title">Одно главное ограничение</h2>
+                  <h2 className="card-title">Одно правило в этом задании</h2>
                 </div>
               </CardHeader>
               <CardBody>
@@ -397,7 +397,7 @@ function CompletedMission({ mission, phrases, onCreate, onDelete }: { mission: R
           <h2 className="mt-2 text-h1 font-light tracking-tight text-primary">
             Выражений перенесено в новый контекст: <span className="numeral">{used.length}</span>.
           </h2>
-          <p className="mt-3 text-sm leading-6 text-secondary">Одно употребление — свидетельство, а не освоение. Эти выражения вернутся в отложенном вспоминании и другом контексте.</p>
+          <p className="mt-3 text-sm leading-6 text-secondary">Одно употребление — ещё не освоение: эти выражения вернутся позже в другом контексте.</p>
 
           <Rule value={used.length} max={mission.targetResults.length} className="mt-5 max-w-56" />
 
@@ -416,7 +416,7 @@ function CompletedMission({ mission, phrases, onCreate, onDelete }: { mission: R
           <div className="mt-7 flex flex-wrap gap-2">
             <Button onClick={onCreate}>Создать следующее задание</Button>
             <Link to="/progress" className={buttonClass({ variant: 'secondary' })}>Открыть прогресс</Link>
-            <Button variant="secondary" onClick={() => { if (window.confirm('Удалить завершённое задание и его свидетельство без возможности восстановления?')) onDelete() }}><Trash2 className="size-4" /> Удалить</Button>
+            <Button variant="secondary" onClick={() => { if (window.confirm('Удалить завершённое задание и его результат без возможности восстановления?')) onDelete() }}><Trash2 className="size-4" /> Удалить</Button>
             <Link to="/" className={buttonClass({ variant: 'ghost' })}>На главную</Link>
           </div>
         </CardBody>

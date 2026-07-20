@@ -21,7 +21,7 @@ export function FieldShell({ label, htmlFor, hint, error, required, children }: 
         {hint && <span className="text-xs text-muted">{hint}</span>}
       </div>
       {children}
-      {error && <p id={`${htmlFor}-error`} role="alert" className="text-sm text-danger">{error}</p>}
+      {error && <p id={`${htmlFor}-error`} role="alert" className="text-sm text-amber">{error}</p>}
     </div>
   )
 }

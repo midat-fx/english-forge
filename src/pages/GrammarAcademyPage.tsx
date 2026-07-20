@@ -122,8 +122,8 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
 
   // Четыре части критерия освоения — одна шкала, а не четыре разноцветные пилюли.
   const mastery = [
-    { label: 'Две разнесённые проверки', done: (activeProgress?.passes ?? 0) >= 2, state: `${Math.min(2, activeProgress?.passes ?? 0)} из 2` },
-    { label: 'Коррекция типичной ошибки', done: Boolean(activeProgress?.correctionPassedAt), state: activeProgress?.correctionPassedAt ? 'готово' : 'нужна' },
+    { label: 'Две проверки с перерывом', done: (activeProgress?.passes ?? 0) >= 2, state: `${Math.min(2, activeProgress?.passes ?? 0)} из 2` },
+    { label: 'Исправленная типичная ошибка', done: Boolean(activeProgress?.correctionPassedAt), state: activeProgress?.correctionPassedAt ? 'готово' : 'нужна' },
     { label: 'Собственный пример', done: Boolean(activeProgress?.productionSelfConfirmedAt), state: activeProgress?.productionSelfConfirmedAt ? 'подтверждён' : 'нужен' },
     { label: 'Отложенный перенос', done: Boolean(activeProgress?.transferSelfConfirmedAt), state: activeProgress?.transferSelfConfirmedAt ? 'готов' : 'нужен' },
   ]
@@ -172,8 +172,8 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
   function saveProduction() {
     if (!active) return
     setProductionMessage(store.saveGrammarProduction(active.id, productionDraft, active.quiz.length, productionConfirmed, lexicalTarget?.id, lessonReferenceTexts(active))
-      ? 'Подтверждённый собственный пример сохранён локально. Перенос откроется через 12 часов.'
-      : 'Нужно новое предложение минимум из шести слов, подтверждение самопроверки и указанное изученное выражение.')
+      ? 'Пример сохранён. Перенос откроется через 12 часов.'
+      : 'Нужно новое предложение минимум из шести слов с указанным выражением — и галочка самопроверки.')
   }
 
   async function saveTransfer() {
@@ -181,17 +181,17 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
     const selections = attemptQuiz.map((question) => ({ questionId: question.id, selectedIndex: answers[question.id] }))
     const constructVerified = await store.recordGrammarTransferCheck(active.id, quizAttemptSeed, selections)
     if (!constructVerified) {
-      setTransferMessage('Контроль конструкции пока не пройден 3/3. Варианты перемешаны; попробуйте ещё раз, не открывая формулу и примеры.')
+      setTransferMessage('Пока не все три ответа верны. Варианты перемешаны — попробуйте ещё раз по памяти.')
       setAnswers({})
       setQuizAttemptSeed((seed) => seed + 1)
       return
     }
     setTransferMessage(store.saveGrammarTransfer(active.id, transferDraft, active.quiz.length, transferConfirmed, lexicalTarget?.id, lessonReferenceTexts(active))
-      ? 'Отложенный перенос и контроль конструкции сохранены как отдельное свидетельство.'
-      : 'Напишите другое предложение минимум из шести слов, подтвердите самопроверку и используйте показанное целевое выражение.')
+      ? 'Перенос и ответы сохранены. Урок снова открыт.'
+      : 'Напишите другое предложение минимум из шести слов с показанным выражением и поставьте галочку самопроверки.')
   }
 
-  const answerButtonClass = 'reading-en min-h-11 w-full rounded-[3px] border px-4 py-2.5 text-left text-sm shadow-[var(--lift-1)]'
+  const answerButtonClass = 'detent reading-en min-h-11 w-full rounded-[3px] border px-4 py-2.5 text-left text-sm shadow-[var(--lift-1)]'
 
   return (
     <div className="space-y-7">
@@ -274,7 +274,7 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
                 aria-current={current ? 'true' : undefined}
                 onClick={() => setSelectedId(lesson.id)}
                 className={cn(
-                  'flex w-full items-baseline gap-3 rounded-[2px] px-3 py-2.5 text-left',
+                  'detent flex w-full items-baseline gap-3 rounded-[2px] px-3 py-2.5 text-left',
                   current ? 'border-l-2 border-rubric bg-recess shadow-[var(--bevel-down)]' : 'border-l-2 border-transparent hover:bg-elevated',
                 )}
               >
@@ -300,7 +300,7 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
             </div>
             <h2 className="mt-4 text-h1 font-light tracking-[-0.02em] text-primary">Вспомните конструкцию без подсказок.</h2>
             <p className="mt-3 max-w-[62ch] text-body leading-relaxed text-secondary">
-              Формула, примеры и первый ответ временно скрыты. Функция задания остаётся видимой, чтобы было понятно, какую конструкцию нужно продемонстрировать.
+              Формула, примеры и первый ответ временно скрыты — вспомните правило сами.
             </p>
 
             <Card level="recess" className="mt-5 px-4 py-3.5">
@@ -330,7 +330,7 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
             <fieldset className="mt-8">
               {/* legend остаётся ПРЯМЫМ ребёнком fieldset — иначе группа теряет доступное имя. */}
               <legend className="rule-double label-caps w-full pb-2 text-primary">Контроль той же конструкции · 3/3</legend>
-              <MarginNote className="xl:max-w-none">Проверяемая часть подтверждения: без неё свободное предложение не объявляется освоением правила.</MarginNote>
+              <MarginNote className="xl:max-w-none">Три верных ответа подтверждают, что правило действительно вспомнилось.</MarginNote>
               <div className="mt-5 space-y-6">
                 {attemptQuiz.map((question, questionIndex) => (
                   <div key={question.id}>
@@ -364,7 +364,7 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
             <div className="rule-double mt-6 pb-4" />
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p role="status" aria-live="polite" className="max-w-[52ch] text-xs leading-5 text-muted">
-                {transferMessage || 'Сохранение откроет урок снова. Свободный текст хранится как самооценка, а конструкция отдельно проверяется вопросами.'}
+                {transferMessage || 'После сохранения урок откроется снова.'}
               </p>
               <Button
                 type="button"
@@ -449,13 +449,13 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
                   <div className="text-body leading-relaxed text-secondary">
                     {lexicalTarget ? (
                       <>
-                        <span>Свяжите грамматику с уже активированной лексикой: <strong lang="en" className="reading-en text-primary">{lexicalTarget.canonical}</strong> — {lexicalTarget.meaning}.</span>
+                        <span>Используйте в своём примере знакомое выражение: <strong lang="en" className="reading-en text-primary">{lexicalTarget.canonical}</strong> — {lexicalTarget.meaning}.</span>
                         {lexicalTarget.context && <p lang="en" className="reading-en mt-1 text-xs text-muted">{lexicalTarget.context}</p>}
                       </>
-                    ) : <span>Лексическое ограничение снято: выбранное выражение не подходит к этой конструкции.</span>}
+                    ) : <span>Выражение не подходит к этому правилу — пишите пример без него.</span>}
                   </div>
                   <Button type="button" variant="ghost" size="sm" className="mt-1" onClick={() => { setLexicalTargetIndex((index) => (index + 1) % (lexicalCandidates.length + 1)); setProductionConfirmed(false); setTransferConfirmed(false) }}>
-                    {lexicalTarget ? 'Сменить или отметить несовместимым' : 'Вернуть выражение'}
+                    {lexicalTarget ? 'Другое выражение' : 'Вернуть выражение'}
                   </Button>
                 </Card>
               )}
@@ -475,7 +475,7 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
               </label>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p role="status" aria-live="polite" className="max-w-[52ch] text-xs leading-5 text-muted">
-                  {productionMessage || (activeProgress?.productionSavedAt ? 'Сохранённый пример загружен из локального профиля.' : 'Автопроверки естественности нет: перед сохранением нужна явная самопроверка.')}
+                  {productionMessage || (activeProgress?.productionSavedAt ? 'Это ваш сохранённый пример.' : 'Перед сохранением сверьте предложение с правилом и поставьте галочку.')}
                 </p>
                 <Button type="button" variant="secondary" onClick={saveProduction} disabled={productionDraft.trim().split(/\s+/u).length < 6 || !productionConfirmed || !productionHasTarget}>
                   Сохранить пример
@@ -490,7 +490,7 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
                       <Stamp caption="Откроется позже">
                         <span className="numeral">{transferReadyAt ? untilLabel(transferReadyAt, Date.now()) : 'через 12 ч'}</span>
                       </Stamp>
-                      <MarginNote className="xl:max-w-none">Пауза в 12 часов снижает вероятность зачёта по кратковременной памяти.</MarginNote>
+                      <MarginNote className="xl:max-w-none">Пауза в 12 часов помогает проверить, что правило действительно запомнилось.</MarginNote>
                     </div>
                   ) : (
                     <>
@@ -580,10 +580,10 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
                   {submitted
                     ? attemptQuiz.filter((question) => answers[question.id] === question.answerIndex).length === attemptQuiz.length
                       ? activeProgress?.completedAt
-                        ? '3/3. Все части критерия освоения выполнены.'
+                        ? '3/3. Тема полностью пройдена.'
                         : (activeProgress?.passes ?? 0) >= 2
-                          ? '3/3. Две разнесённые проверки готовы; завершите коррекцию, собственный пример и отложенный перенос.'
-                          : '3/3. Успешная проверка сохранена; следующая засчитается не раньше чем через 12 часов.'
+                          ? '3/3. Осталось исправить типичную ошибку, написать свой пример и сделать отложенный перенос.'
+                          : '3/3. Проверка сохранена; следующая засчитается не раньше чем через 12 часов.'
                       : `${attemptQuiz.filter((question) => answers[question.id] === question.answerIndex).length}/${attemptQuiz.length}. Посмотрите объяснения и попробуйте снова.`
                     : 'Ответьте на все три вопроса.'}
                 </p>
@@ -612,7 +612,7 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
                   ))}
                 </dl>
                 {activeProgress?.legacyCompletedAt && !activeProgress.completedAt && (
-                  <p className="mt-3 text-xs leading-5 text-amber">Ранее тема отмечалась завершённой по старому критерию. Дата сохранена, но для текущего статуса нужны новые свидетельства.</p>
+                  <p className="mt-3 text-xs leading-5 text-amber">Раньше тема считалась пройденной по старым правилам. Дата сохранена, но проверки нужно пройти заново.</p>
                 )}
               </Card>
             </section>
@@ -630,9 +630,9 @@ function GrammarAcademyContent({ requestedLessonId }: { requestedLessonId: strin
 
       <details className="rounded-[3px] border border-border bg-surface p-4 text-xs text-muted shadow-[var(--lift-1)]">
         <summary className="label-caps cursor-pointer text-secondary">Источники учебной программы</summary>
-        <p className="mt-3 leading-5">Тексты уроков, примеры и вопросы оригинальные. Полнота тем проверена по этим учебным и CEFR-источникам.</p>
+        <p className="mt-3 leading-5">Тексты уроков, примеры и вопросы оригинальные; список тем сверен с этими учебниками.</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {grammarAcademySources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="text-teal hover:underline">{source.publisher} — {source.title}</a>)}
+          {grammarAcademySources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="ink-underline text-teal">{source.publisher} — {source.title}</a>)}
         </div>
       </details>
     </div>
@@ -662,12 +662,12 @@ function CumulativeCheckpoint({ level }: { level: GrammarLevel }) {
   return <Card><CardBody>
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="max-w-[62ch]">
-        <p className="section-kicker">{available.length === 1 ? 'Точечное возвращение' : 'Накопительная проверка'}</p>
-        <h2 className="mt-1.5 text-h3 font-light text-primary">{available.length === 1 ? 'Верните одну тему по расписанию' : 'Смешайте несколько прошлых тем'}</h2>
+        <p className="section-kicker">{available.length === 1 ? 'Повторение одной темы' : 'Накопительная проверка'}</p>
+        <h2 className="mt-1.5 text-h3 font-light text-primary">{available.length === 1 ? 'Повторите одну тему' : 'Повторите несколько прошлых тем'}</h2>
         <p className="mt-2 text-body leading-relaxed text-secondary">
           {available.length === 1
-            ? 'Один вопрос закрывает срок повторения этой темы и честно переносит следующий показ: завтра после ошибки или позже после успеха.'
-            : 'По одному вопросу из разных ранее изучавшихся тем, которые пора извлечь снова. Результат сохраняется отдельно и не подменяет освоение урока.'}
+            ? 'Один вопрос по теме, которую пора повторить. После ошибки она вернётся завтра, после успеха — позже.'
+            : 'По одному вопросу из тем, которые пора повторить. После ошибки тема вернётся завтра, после успеха — позже.'}
         </p>
       </div>
       {!session && <Button type="button" variant="secondary" disabled={!available.length} onClick={() => { setSession(available); setAnswers({}); setSubmitted(false) }}>Начать · {available.length}</Button>}
@@ -675,11 +675,11 @@ function CumulativeCheckpoint({ level }: { level: GrammarLevel }) {
 
     {!session && !available.length && (
       <div className="mt-5">
-        <Stamp caption="Срок не наступил">
-          <span>Сейчас ни у одной ранее изучавшейся темы не наступил срок возвращения.</span>
+        <Stamp caption="Повторять пока нечего">
+          <span>Все темы повторены вовремя.</span>
         </Stamp>
         {nextAt && nextAt > Date.now() && (
-          <MarginNote className="xl:max-w-none">Ближайшее возвращение <span className="numeral">{untilLabel(nextAt, Date.now())}</span>.</MarginNote>
+          <MarginNote className="xl:max-w-none">Следующее повторение <span className="numeral">{untilLabel(nextAt, Date.now())}</span>.</MarginNote>
         )}
       </div>
     )}
@@ -710,7 +710,7 @@ function CumulativeCheckpoint({ level }: { level: GrammarLevel }) {
                     aria-pressed={chosen}
                     onClick={() => setAnswers((current) => ({ ...current, [item.question.id]: choiceIndex }))}
                     className={cn(
-                      'reading-en min-h-11 w-full rounded-[3px] border px-4 py-2.5 text-left text-sm shadow-[var(--lift-1)]',
+                      'detent reading-en min-h-11 w-full rounded-[3px] border px-4 py-2.5 text-left text-sm shadow-[var(--lift-1)]',
                       correct ? 'border-verified/50 bg-verified-soft text-teal'
                         : wrong ? 'border-amber/50 bg-amber/10 text-amber'
                         : chosen ? 'border-transparent border-l-2 border-l-rubric bg-recess text-primary shadow-[var(--press)]'
@@ -730,7 +730,7 @@ function CumulativeCheckpoint({ level }: { level: GrammarLevel }) {
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p aria-live="polite" className="max-w-[52ch] text-xs leading-5 text-muted">
           {submitted
-            ? `Сохранено: ${session.filter((item) => answers[item.question.id] === item.question.answerIndex).length}/${session.length}. Ошибочные темы вернутся завтра; успешные — позже. Сейчас разберите объяснения или откройте соответствующий урок.`
+            ? `Сохранено: ${session.filter((item) => answers[item.question.id] === item.question.answerIndex).length}/${session.length}. Темы с ошибкой вернутся завтра, остальные — позже.`
             : 'Ответьте на каждый вопрос.'}
         </p>
         {submitted

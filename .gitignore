@@ -34,3 +34,9 @@ CLAUDE_REVIEW_PROMPT_RU.md
 IMPLEMENTED_IMPROVEMENTS_RU.md
 NEXT_IDEAS_RU.md
 START_HERE_RU.md
+
+# Motion-audit working notes (improve-animations skill)
+plans/
+
+# Locally installed agent skills (third-party tooling, not the product)
+.agents/

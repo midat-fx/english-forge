@@ -16,6 +16,7 @@ const VoiceLabPage = lazy(() => import('./pages/VoiceLabPage').then((module) => 
 const PlacementPage = lazy(() => import('./pages/PlacementPage').then((module) => ({ default: module.PlacementPage })))
 const VocabularyLibraryPage = lazy(() => import('./pages/VocabularyLibraryPage').then((module) => ({ default: module.VocabularyLibraryPage })))
 const GrammarAcademyPage = lazy(() => import('./pages/GrammarAcademyPage').then((module) => ({ default: module.GrammarAcademyPage })))
+const CardsPage = lazy(() => import('./pages/CardsPage').then((module) => ({ default: module.CardsPage })))
 const SkillsDiagnosticPage = lazy(() => import('./pages/SkillsDiagnosticPage').then((module) => ({ default: module.SkillsDiagnosticPage })))
 
 function LearningRoutes() {
@@ -58,6 +59,7 @@ function LearningRoutes() {
         <Route path="library" element={<VocabularyLibraryPage />} />
         <Route path="grammar" element={<GrammarAcademyPage />} />
         <Route path="phrases" element={<PhraseBankPage />} />
+        <Route path="cards" element={<CardsPage />} />
         <Route path="practice" element={<PracticePage />} />
         <Route path="voice" element={<VoiceLabPage />} />
         <Route path="errors" element={<ErrorLabPage />} />

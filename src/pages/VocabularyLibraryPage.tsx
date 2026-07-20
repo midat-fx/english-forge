@@ -12,7 +12,7 @@ import { Rule } from '../components/ui/Rule'
 import { lexicalCatalogLevelCounts, lexicalCatalogTotalCount } from '../data/lexicalCatalogLoader'
 import { lexicalCatalogMethodology } from '../data/lexicalCatalogMethodology'
 import { activationBacklogSize, activationNewEnrollmentLimit } from '../domain/activation'
-import { DAILY_NEW_ITEM_COUNT, dailyVocabularyItems, isPracticeReadyPhrase, localDayKey, resolveDailyVocabularyAssignment } from '../domain/dailyVocabulary'
+import { dailyVocabularyItems, isPracticeReadyPhrase, localDayKey, resolveDailyVocabularyAssignment } from '../domain/dailyVocabulary'
 import { phraseFingerprint } from '../domain/normalization'
 import { buildPracticeQueue } from '../domain/queue'
 import { useLocalToday } from '../hooks/useLocalToday'
@@ -76,12 +76,15 @@ export function VocabularyLibraryPage() {
   const { items: browseCatalog, error: browseError, loading: browseLoading } = useLexicalCatalogLevel(level)
   const { items: dailyCatalog, error: dailyError, loading: dailyLoading } = useLexicalCatalogLevel(store.preferences.currentLevel)
   const owned = useMemo(() => new Set(store.phrases.filter((phrase) => phrase.status !== 'archived' && isPracticeReadyPhrase(phrase)).map((phrase) => phraseFingerprint(phrase.canonical))), [store.phrases])
+  // Размер дневного «Знакомства» настраивается (Настройки → Учёба); ?? 10 — профили до 0.7.1.
+  const dailyNewTarget = Math.min(30, Math.max(1, store.preferences.dailyNewWords ?? 10))
+
   const dailyResolution = useMemo(
-    () => dailyCatalog ? resolveDailyVocabularyAssignment(dailyCatalog, store.preferences.currentLevel, store.phrases, today, DAILY_NEW_ITEM_COUNT, store.dailyVocabularyAssignments.find((item) => item.dayKey === localDayKey(today) && item.level === store.preferences.currentLevel) ?? store.dailyVocabularyAssignment, store.dailyVocabularyAssignments) : null,
-    [dailyCatalog, store.dailyVocabularyAssignment, store.dailyVocabularyAssignments, store.phrases, store.preferences.currentLevel, today],
+    () => dailyCatalog ? resolveDailyVocabularyAssignment(dailyCatalog, store.preferences.currentLevel, store.phrases, today, dailyNewTarget, store.dailyVocabularyAssignments.find((item) => item.dayKey === localDayKey(today) && item.level === store.preferences.currentLevel) ?? store.dailyVocabularyAssignment, store.dailyVocabularyAssignments) : null,
+    [dailyCatalog, dailyNewTarget, store.dailyVocabularyAssignment, store.dailyVocabularyAssignments, store.phrases, store.preferences.currentLevel, today],
   )
   const dailyAssignment = dailyResolution?.assignment ?? null
-  const dailyItems = useMemo(() => dailyCatalog && dailyAssignment ? dailyVocabularyItems(dailyCatalog, store.preferences.currentLevel, store.phrases, today, DAILY_NEW_ITEM_COUNT, dailyAssignment, store.dailyVocabularyAssignments) : [], [dailyAssignment, dailyCatalog, store.dailyVocabularyAssignments, store.phrases, store.preferences.currentLevel, today])
+  const dailyItems = useMemo(() => dailyCatalog && dailyAssignment ? dailyVocabularyItems(dailyCatalog, store.preferences.currentLevel, store.phrases, today, dailyNewTarget, dailyAssignment, store.dailyVocabularyAssignments) : [], [dailyAssignment, dailyCatalog, dailyNewTarget, store.dailyVocabularyAssignments, store.phrases, store.preferences.currentLevel, today])
   const enrolledDailyIds = useMemo(() => new Set(dailyAssignment?.enrolledIds ?? []), [dailyAssignment?.enrolledIds])
   const previewedDailyIds = useMemo(() => new Set(dailyAssignment?.previewedIds ?? []), [dailyAssignment?.previewedIds])
   const assignedDailyIds = useMemo(() => new Set(dailyAssignment?.itemIds ?? []), [dailyAssignment?.itemIds])
@@ -115,11 +118,11 @@ export function VocabularyLibraryPage() {
     const result = store.enrollCatalogItem(item, dailyAssignment)
     if (result.id) {
       if (!quiet) setMessage(item.activationReady === true
-        ? `“${item.expression}” добавлено в мои слова с полным маршрутом.`
-        : `“${item.expression}” добавлено в мои слова. Этапы 1–5 доступны; для шага 6 добавьте личный паттерн ошибки.`)
+        ? `“${item.expression}” добавлено в мои слова.`
+        : `“${item.expression}” добавлено в мои слова. Первые пять шагов доступны; шаг 6 откроется после вашего примера ошибки.`)
       return true
     }
-    if (!quiet) setMessage(result.duplicateId ? 'Эта единица уже есть в моих словах.' : result.error ?? 'Не удалось добавить эту единицу.')
+    if (!quiet) setMessage(result.duplicateId ? 'Это слово уже есть в моих словах.' : result.error ?? 'Не удалось добавить это слово.')
     return false
   }
 
@@ -129,7 +132,7 @@ export function VocabularyLibraryPage() {
       setMessage(`“${item.expression}” сохранено в мои слова. Первые пять шагов доступны; для шага 6 добавьте личный пример вашей ошибки.`)
       return
     }
-    setMessage(result.duplicateId ? 'Эта единица уже есть в моих словах.' : result.error ?? 'Не удалось сохранить эту единицу.')
+    setMessage(result.duplicateId ? 'Это слово уже есть в моих словах.' : result.error ?? 'Не удалось сохранить это слово.')
   }
 
   function addDailySet() {
@@ -137,19 +140,19 @@ export function VocabularyLibraryPage() {
     const discoveredCandidates = deepEligibleDailyItems.filter((item) => previewedDailyIds.has(item.id) && !enrolledDailyIds.has(item.id))
     const added = discoveredCandidates.slice(0, remainingSlots).filter((item) => addItem(item, true)).length
     setMessage(added
-      ? `${added} новых единиц добавлено в глубокий цикл без создания будущего долга по повторениям.`
+      ? `Новых слов в повторениях: ${added}.`
       : !dailyItems.length
-        ? 'Каталог этого уровня завершён: переходите к повторению или добавьте собственное выражение.'
+        ? 'Новых слов на этом уровне больше нет: переходите к повторениям или добавьте своё выражение.'
         : !discoveredCandidates.length
-          ? 'Сначала завершите первичное извлечение хотя бы одной карточки, затем выберите её в глубокий цикл.'
-          : `Безопасный лимит глубокого цикла на сегодня — ${dailySelectionTarget}; остальные карточки остаются только в Discovery.`)
+          ? 'Сначала угадайте значение хотя бы одной карточки.'
+          : `Лимит на сегодня — ${dailySelectionTarget}. Остальные карточки подождут до завтра.`)
   }
 
   function completeDiscovery(item: LexicalCatalogItem) {
     if (!dailyAssignment) return
     store.markDailyVocabularyPreviewed(item.id, dailyAssignment)
     setRecognitionNeedsRetry((ids) => ids.filter((id) => id !== item.id))
-    setMessage(`Первичное извлечение «${item.expression}» сохранено. Глубокий цикл добавляется отдельно по безопасному лимиту.`)
+    setMessage(`«${item.expression}» узнано. Теперь его можно взять в повторения.`)
   }
 
   function answerDiscovery(item: LexicalCatalogItem, answer: string) {
@@ -158,7 +161,7 @@ export function VocabularyLibraryPage() {
       return
     }
     setRecognitionNeedsRetry((ids) => ids.includes(item.id) ? ids : [...ids, item.id])
-    setMessage(`Ответ для «${item.expression}» пока неверный. Посмотрите коррекцию и повторите без подсказки.`)
+    setMessage(`Ответ для «${item.expression}» пока неверный. Посмотрите правильный ответ и повторите без подсказки.`)
   }
 
   function replaceDailyItem(item: LexicalCatalogItem) {
@@ -187,7 +190,7 @@ export function VocabularyLibraryPage() {
 
   function speak(item: LexicalCatalogItem) {
     if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-      setMessage('Системный голос macOS сейчас недоступен.')
+      setMessage('Озвучка сейчас недоступна.')
       return
     }
     const utterance = new SpeechSynthesisUtterance(item.expression)
@@ -195,7 +198,7 @@ export function VocabularyLibraryPage() {
     utterance.rate = 0.9
     window.speechSynthesis.cancel()
     window.speechSynthesis.speak(utterance)
-    setMessage(`Произношение «${item.expression}» воспроизводится локальным голосом macOS.`)
+    setMessage(`Звучит «${item.expression}».`)
   }
 
   return (
@@ -207,7 +210,7 @@ export function VocabularyLibraryPage() {
             <p className="section-kicker">Библиотека полезного английского</p>
             <h2 className="mt-3 text-h1 font-light tracking-[-0.02em] text-primary">Большой словарь без перегрузки.</h2>
             <p className="mt-3 max-w-2xl text-body leading-relaxed text-secondary">
-              <span className="numeral">{lexicalCatalogTotalCount}</span> проверенных слов и выражений по уровням. Каждый день вы знакомитесь с новыми выражениями; в полную отработку берутся карточки с авторской парой «ошибка → исправление». Остальные можно сохранить себе для первых пяти шагов и дополнить собственным примером ошибки.
+              <span className="numeral">{lexicalCatalogTotalCount}</span> проверенных слов и выражений по уровням. Каждый день вы знакомитесь с новыми, а лучшие берёте в повторения.
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -224,35 +227,32 @@ export function VocabularyLibraryPage() {
         <div className="flex flex-col gap-5 border-b border-border p-5 sm:p-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="section-kicker">Ежедневный набор · {store.preferences.currentLevel}</p>
-            <h2 className="mt-2 text-h2 font-light text-primary">Сегодняшние <span className="numeral">10</span> слов и выражений</h2>
+            <h2 className="mt-2 text-h2 font-light text-primary">Сегодняшние слова и выражения</h2>
             <dl className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2">
               <div className="min-w-0">
-                <dt className="metric-label">Знакомство со скрытым значением</dt>
+                <dt className="metric-label">Знакомство</dt>
                 <dd className="mt-1.5 flex items-center gap-3">
-                  <Rule value={dailyPreviewed} max={dailyItems.length || DAILY_NEW_ITEM_COUNT} showFraction={false} className="w-28" />
+                  <Rule value={dailyPreviewed} max={dailyItems.length || dailyNewTarget} showFraction={false} className="w-28" />
                   <span className="numeral text-xs text-secondary">угадано {dailyPreviewed}/{dailyItems.length}</span>
                 </dd>
               </div>
               <div className="min-w-0">
-                <dt className="metric-label">Глубокий цикл</dt>
+                <dt className="metric-label">Взято в повторения</dt>
                 <dd className="mt-1.5 flex items-center gap-3">
                   {dailySelectionTarget > 0 && <Rule value={Math.min(dailyLearned, dailySelectionTarget)} max={dailySelectionTarget} showFraction={false} className="w-28" />}
                   <span className="numeral text-xs text-secondary">взято в работу {Math.min(dailyLearned, dailySelectionTarget)} из {dailySelectionTarget}</span>
                 </dd>
               </div>
             </dl>
-            <MarginNote className="xl:max-w-none">Полную отработку получают карточки с парой «ошибка → исправление»; остальные — первые пять шагов.</MarginNote>
+            <MarginNote className="xl:max-w-none">«Уже знаю» убирает слово из повторений, но оставляет его в справочнике.</MarginNote>
             <p aria-live="polite" className="mt-3 min-h-5 text-xs leading-5 text-teal">{message}</p>
           </div>
-          <Button size="lg" className="shrink-0" onClick={addDailySet} disabled={dailyLoading || !dailyAssignment || !dailyItems.length || dailyLearned >= dailySelectionTarget}>
-            <Plus className="size-4" /> {dailyLoading ? 'Открываем набор…' : !dailyItems.length ? 'Уровень завершён' : dailyLearned >= dailySelectionTarget ? 'Лимит выбран' : <>Выбрать ещё <span className="numeral">{dailySelectionTarget - dailyLearned}</span></>}
-          </Button>
         </div>
 
         {dailyError && <p role="alert" className="m-5 rounded-[3px] border border-rubric/35 bg-rubric-soft p-4 text-sm text-ember-text">{dailyError}</p>}
 
         <div aria-busy={dailyLoading} className="grid gap-px bg-border md:grid-cols-2">
-          {dailyLoading ? Array.from({ length: DAILY_NEW_ITEM_COUNT }, (_, index) => (
+          {dailyLoading ? Array.from({ length: dailyNewTarget }, (_, index) => (
             <div key={index} className="min-h-44 animate-pulse bg-recess p-5 motion-reduce:animate-none">
               <div className="h-3 w-8 rounded-[2px] bg-elevated" />
               <div className="mt-4 h-4 w-3/4 rounded-[2px] bg-elevated" />
@@ -278,20 +278,20 @@ export function VocabularyLibraryPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="numeral text-xs text-muted">{String(index + 1).padStart(2, '0')}</span>
                       <Badge tone="neutral">Знакомство</Badge>
-                      {discovered && <Badge tone="positive">Узнано ✓</Badge>}
+                      {discovered && <Badge tone="positive" className="stamp-in">Узнано ✓</Badge>}
                       {added && <Badge tone="amber">В работе</Badge>}
                     </div>
                     {/* Лестница Знакомство → Узнано ✓ → В работе */}
                     <Rule value={stage} max={3} showFraction={false} className="mt-2.5 w-20" />
                   </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => speak(item)} aria-label={`Услышать произношение: ${item.expression}`} title="Локальный голос macOS"><Volume2 className="size-4" /></Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => speak(item)} aria-label={`Услышать произношение: ${item.expression}`} title="Озвучка"><Volume2 className="size-4" /></Button>
                 </div>
 
                 <h3 lang="en" className="reading-en mt-3 text-readlg text-primary">{item.expression}</h3>
                 <p className="inspector-label mt-1">{item.activationReady === true ? <><span className="numeral">8</span> шагов</> : <>Первые <span className="numeral">5</span> шагов</>}</p>
 
                 {discovered ? (
-                  <>
+                  <div className="rise-in flex flex-1 flex-col">
                     <p lang="ru" className="mt-2 text-sm font-semibold text-teal">{item.translationRu}</p>
                     <p lang="en" className="set-text reading-en mt-4 text-read text-primary">{item.example}</p>
                     <p lang="ru" className="mt-2 text-xs leading-5 text-muted">{item.exampleTranslationRu}</p>
@@ -302,20 +302,20 @@ export function VocabularyLibraryPage() {
                           <Link to={`/practice?phrase=${encodeURIComponent(phraseId)}&support=1`} className={buttonClass({ size: 'sm' })}><Brain className="size-4" /> Тренировать</Link>
                         </>
                       ) : item.activationReady === true ? (
-                        <Button type="button" disabled={dailyLearned >= dailySelectionTarget} onClick={() => addItem(item)} title={dailyLearned >= dailySelectionTarget ? 'Сначала завершите запланированные активации и SRS-повторы.' : undefined}><Plus className="size-4" /> В глубокий цикл</Button>
+                        <Button type="button" disabled={dailyLearned >= dailySelectionTarget} onClick={() => addItem(item)} title={dailyLearned >= dailySelectionTarget ? 'Лимит новых слов на сегодня выбран. Продолжите завтра.' : undefined}><Plus className="size-4" /> Повторять</Button>
                       ) : (
-                        <Button type="button" variant="secondary" onClick={() => saveReferenceItem(item)}><BookHeart className="size-4" /> Сохранить этапы 1–5</Button>
+                        <Button type="button" variant="secondary" onClick={() => saveReferenceItem(item)}><BookHeart className="size-4" /> В мои слова</Button>
                       )}
                       <Button type="button" variant="secondary" onClick={() => replaceDailyItem(item)}>Отложить и заменить</Button>
-                      <Button type="button" variant="ghost" onClick={() => markTooSimple(item)}>Слишком просто</Button>
+                      <Button type="button" variant="ghost" onClick={() => markTooSimple(item)}>Уже знаю</Button>
                     </div>
-                  </>
+                  </div>
                 ) : (
                   <div className="mt-4 flex flex-1 flex-col">
-                    <p className="text-sm leading-6 text-secondary">Выберите точное значение. Перевод и пример скрыты до правильного ответа.</p>
+                    <p className="text-sm leading-6 text-secondary">Выберите значение — перевод и пример откроются после правильного ответа.</p>
                     {needsRetry ? (
-                      <div className="mt-4 rounded-[3px] border border-amber/40 bg-amber/10 p-4 shadow-[var(--bevel-down)]" role="status">
-                        <p className="text-sm text-primary">Пока неверно. Коррекция: <strong lang="ru" className="text-rubric">{item.translationRu}</strong></p>
+                      <div className="rise-in mt-4 rounded-[3px] border border-amber/40 bg-amber/10 p-4 shadow-[var(--bevel-down)]" role="status">
+                        <p className="text-sm text-primary">Пока неверно. Правильно: <strong lang="ru" className="text-rubric">{item.translationRu}</strong></p>
                         <Button type="button" variant="secondary" className="mt-3 w-full" onClick={() => setRecognitionNeedsRetry((ids) => ids.filter((id) => id !== item.id))}>Повторить без подсказки</Button>
                       </div>
                     ) : (
@@ -327,7 +327,7 @@ export function VocabularyLibraryPage() {
                     )}
                     <div className="mt-auto grid gap-2 pt-6 sm:grid-cols-2">
                       <Button type="button" variant="secondary" onClick={() => replaceDailyItem(item)}>Отложить</Button>
-                      <Button type="button" variant="ghost" onClick={() => markTooSimple(item)}>Слишком просто</Button>
+                      <Button type="button" variant="ghost" onClick={() => markTooSimple(item)}>Уже знаю</Button>
                     </div>
                   </div>
                 )}
@@ -338,7 +338,7 @@ export function VocabularyLibraryPage() {
             <div className="col-span-full bg-surface p-10 text-center">
               <Check className="mx-auto size-7 text-teal" />
               <h3 className="mt-4 text-h3 font-light text-primary">Каталог уровня {store.preferences.currentLevel} завершён.</h3>
-              <p className="mx-auto mt-2 max-w-2xl text-body leading-relaxed text-secondary">Сначала закройте отложенные повторения, накопительную грамматику и Mission, затем подтвердите следующий уровень новой диагностикой.</p>
+              <p className="mx-auto mt-2 max-w-2xl text-body leading-relaxed text-secondary">Закройте оставшиеся повторения и грамматику, затем проверьте переход на следующий уровень.</p>
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 <Link to="/practice" className={buttonClass()}>К повторениям</Link>
                 <Link to="/grammar" className={buttonClass({ variant: 'secondary' })}>Накопительная грамматика</Link>
@@ -369,7 +369,6 @@ export function VocabularyLibraryPage() {
                   )}
                 >
                   <span className="numeral text-sm font-bold">{itemLevel}</span>
-                  <span className="numeral mt-0.5 hidden text-[0.6875rem] text-muted sm:inline">{lexicalCatalogLevelCounts[itemLevel]} справ.</span>
                 </button>
               ))}
             </div>
@@ -383,7 +382,7 @@ export function VocabularyLibraryPage() {
               <Select aria-label="Тема" value={topic} onChange={(event) => { setTopic(event.target.value); setPage(0) }} className="capitalize">{topics.map((value) => <option key={value} value={value}>{value === 'all' ? 'Все темы' : value}</option>)}</Select>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs text-muted">
-              <span>{browseLoading ? `Открываем каталог ${level}…` : <>Уровень {level}: <span className="numeral">{lexicalCatalogLevelCounts[level]}</span> справочных · <span className="numeral">{browseReadyCount}</span> готовы к активному курсу · найдено <span className="numeral">{filtered.length}</span> · страница <span className="numeral">{Math.min(page, pageCount - 1) + 1}</span> из <span className="numeral">{pageCount}</span></>}</span>
+              <span>{browseLoading ? `Открываем каталог ${level}…` : <>Уровень {level}: <span className="numeral">{lexicalCatalogLevelCounts[level]}</span> карточек · <span className="numeral">{browseReadyCount}</span> готовы к активному курсу · найдено <span className="numeral">{filtered.length}</span> · страница <span className="numeral">{Math.min(page, pageCount - 1) + 1}</span> из <span className="numeral">{pageCount}</span></>}</span>
               <span className="text-teal">{message}</span>
             </div>
           </CardBody>
@@ -430,7 +429,7 @@ export function VocabularyLibraryPage() {
                     {added ? <Check className="size-5" /> : <Plus className="size-5" />}
                   </button>
                 ) : (
-                  <Button type="button" size="sm" variant="secondary" disabled={added} onClick={() => saveReferenceItem(item)} aria-label={added ? `«${item.expression}» сохранено в мои слова для дополнения` : `Сохранить «${item.expression}» и дополнить в моих словах`} title="Сохранить полную карточку лично; шаг 6 откроется после вашего проверяемого паттерна ошибки">
+                  <Button type="button" size="sm" variant="secondary" disabled={added} onClick={() => saveReferenceItem(item)} aria-label={added ? `«${item.expression}» сохранено в мои слова для дополнения` : `Сохранить «${item.expression}» и дополнить в моих словах`} title="Сохранить карточку; шаг 6 откроется после вашего примера ошибки">
                     <BookHeart className="size-4 text-teal" />{added ? 'Сохранено' : 'Сохранить и дополнить'}
                   </Button>
                 )}

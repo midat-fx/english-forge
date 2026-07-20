@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
-  AudioLines,
+  ArrowRight,
+  Check,
   CheckCircle2,
   Eye,
   FileAudio,
@@ -23,12 +24,13 @@ import { Button } from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { FieldShell, Input, Select, Textarea } from "../components/ui/Field";
 import { MarginNote } from "../components/ui/MarginNote";
+import { Diff } from "../components/ui/Diff";
 import { Rule } from "../components/ui/Rule";
 import { Stamp } from "../components/ui/Stamp";
 import { includesPhrase } from "../domain/normalization";
 import { activationRecognitionLabel, redactAcceptedForms } from "../domain/practice";
 import { hasQualifiedActivationThrough } from "../domain/activation";
-import { DICTATION_MATCH_RATIO, dictationMatches, selectDailyListeningReference } from "../domain/listening";
+import { DICTATION_MATCH_RATIO, dictationMatches, dictationWordScore, selectDailyListeningReference } from "../domain/listening";
 import { grammarAcademyLessons } from "../data/grammarAcademy";
 import { LISTENING_PROMPTS_BY_LEVEL } from "../data/listeningPromptBank";
 import {
@@ -108,18 +110,18 @@ function localizeVoiceError(error: unknown, fallback: string): string {
   if (message.includes("Complete the listening response")) return "Перед сохранением заполните ответ по аудированию.";
   if (message.includes("Listening practice must be between 1 and 300 seconds")) return "Практика аудирования должна длиться от 1 до 300 секунд.";
   if (message.includes("Finish playing the audio")) return "Сначала прослушайте аудио до конца.";
-  if (message.includes("immutable reference snapshot")) return "Для точного совпадения нужен сохранённый эталон попытки.";
+  if (message.includes("immutable reference snapshot")) return "Для проверки совпадения нужен сохранённый текст фрагмента.";
   if (message.includes("empty recording")) return "Нельзя сохранить пустую аудиозапись.";
-  if (message.includes("25 MiB")) return "Одна аудиозапись не может превышать локальный лимит 25 МиБ.";
+  if (message.includes("25 MiB")) return "Одна аудиозапись не может превышать 25 МиБ.";
   if (message.includes("already being registered")) return "Эта аудиозапись уже сохраняется.";
-  if (message.includes("does not exist in this browser")) return "Локальная аудиозапись не найдена на этом устройстве.";
+  if (message.includes("does not exist in this browser")) return "Аудиозапись не найдена.";
   if (message.includes("profile changed repeatedly")) return "Профиль несколько раз изменился во время сохранения. Повторите действие.";
   if (message.includes("Add at least one English word or expression")) return "Добавьте хотя бы одно английское слово или выражение.";
   return fallback;
 }
 
 function speakingMessageIsError(message: string): boolean {
-  return /^(добавьте|дождитесь|для каждого|запишите|не удалось|нельзя|перед сохранением|подтвердите|сначала|сохраняйте|эта речевая)/iu.test(message);
+  return /^(добавьте|во всех|дождитесь|для каждого|запишите|не удалось|нельзя|одна|перед сохранением|подтвердите|профиль|сначала|сохраняйте|эта)/iu.test(message);
 }
 
 function formatSegmentTime(seconds: number) {
@@ -150,20 +152,11 @@ export function VoiceLabPage() {
   return (
     <div className="space-y-6">
       <header>
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-          <p className="label-caps text-rubric">Локальная голосовая студия</p>
-          <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-            <ShieldCheck className="size-3.5 text-verified" aria-hidden="true" />
-            Без облачной загрузки
-          </span>
-        </div>
-        <h2 className="mt-2 text-2xl font-light leading-snug tracking-tight text-primary">
+        <h2 className="text-2xl font-light leading-snug tracking-tight text-primary">
           Слушайте, говорите, проверяйте, повторяйте.
         </h2>
-        <div className="rule-double mt-3" />
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-secondary">
-          Записи остаются на этом устройстве. Транскрипты можно исправлять,
-          а в историю обучения попадает только явно подтверждённая практика.
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-secondary">
+          В историю обучения попадает только то, что вы сами подтвердили.
         </p>
       </header>
       <div
@@ -412,8 +405,8 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
       } else {
         setMessage(
           mode === "shadowing"
-            ? "Теневой повтор сохранён локально как практика аудирования и произношения; он не считается свидетельством активной речи."
-            : `Попытка сохранена локально. ${evidenceCount ? `Подтверждённых выражений добавлено как свидетельство устной речи: ${evidenceCount}.` : capture ? "Свидетельство продуктивного использования выражений не добавлено." : "Попытка без аудиозаписи не считается свидетельством устной речи."}`,
+            ? "Теневой повтор сохранён как тренировка слуха и произношения."
+            : `Попытка сохранена. ${evidenceCount ? `Засчитано выражений в живой речи: ${evidenceCount}.` : capture ? "Целевые выражения в этот раз не засчитаны." : "Попытка без аудиозаписи не засчитывается как устная речь."}`,
         );
         if (mode !== "shadowing" && !targetPhraseId && evidenceCount > 0) {
           const evidenced = new Set(evidencePhraseIds);
@@ -457,8 +450,8 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
       !attempt ||
       !window.confirm(
         attempt.mode === "fluency_432"
-          ? "Удалить всю лестницу 60/45/30 и связанные локальные аудиозаписи?"
-          : "Удалить эту голосовую попытку и связанную локальную аудиозапись?",
+          ? "Удалить всю лестницу 60/45/30 вместе с аудио?"
+          : "Удалить эту попытку вместе с аудио?",
       )
     )
       return;
@@ -472,8 +465,8 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
       ).length;
       setMessage(
         failed
-          ? `Данные попытки удалены, но удалить лишние аудиофайлы не удалось: ${failed}. Приложение повторит очистку при запуске.`
-          : "Голосовая попытка и локальное аудио удалены.",
+          ? `Попытка удалена, но часть аудиофайлов удалить не удалось: ${failed}. Приложение допочистит их при запуске.`
+          : "Попытка и аудио удалены.",
       );
       if (attempt.sessionId === sessionId) {
         setRound(1);
@@ -579,7 +572,7 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
                 </label>
               </div>
             ) : (
-              <p className="rounded-[3px] bg-recess p-4 text-xs leading-5 text-muted shadow-[var(--bevel-down)]">Грамматическое ограничение появится после первой сохранённой проверки темы вашего уровня. Пока попытка тренирует речь и лексику без ложного заявления о переносе грамматики.</p>
+              <p className="rounded-[3px] bg-recess p-4 text-xs leading-5 text-muted shadow-[var(--bevel-down)]">Грамматическая подсказка появится после первой проверки по грамматике вашего уровня.</p>
             ))}
             <fieldset disabled={mode === "fluency_432" && round > 1}>
               <legend className="text-sm font-semibold text-primary">
@@ -607,7 +600,7 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
                     </button>
                   );
                 })}
-                {!candidates.length && <p className="text-xs leading-5 text-muted">Пока нет выражений с сохранённой практикой. Завершите шаги 1–6; обычная голосовая попытка сохранится, но не выдаст свежую карточку за активную лексику.</p>}
+                {!candidates.length && <p className="text-xs leading-5 text-muted">Пока нет отработанных выражений. Попытка всё равно сохранится как тренировка.</p>}
               </div>
             </fieldset>
           </CardBody>
@@ -639,7 +632,7 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
             <FieldShell
               label="Редактируемая транскрипция"
               htmlFor="voice-transcript"
-              hint="Запишите то, что реально сказали. Распознавание речи не выдаётся за оценку произношения."
+              hint="Запишите то, что реально сказали."
             >
               <Textarea
                 id="voice-transcript"
@@ -717,7 +710,7 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
                     : "Я читал(а) заметки или целевую формулировку во время ответа"}
                 </span>
                 <span className="mt-1 block text-xs leading-5 text-muted">
-                  Запись сохранится, но не будет считаться свидетельством активной речи.
+                  Запись сохранится, но не засчитается как самостоятельная речь.
                 </span>
               </span>
             </label>
@@ -728,11 +721,12 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
                 aria-live="polite"
                 className={`text-sm leading-6 ${speakingMessageIsError(message) ? "text-amber" : "text-secondary"}`}
               >
+                {message && !speakingMessageIsError(message) && <Check aria-hidden="true" className="mr-1.5 inline size-4 text-verified" />}
                 {message || "Ничего не засчитывается, пока вы не нажмёте «Сохранить попытку»."}
               </p>
               <Button onClick={() => void saveAttempt()} disabled={saving}>
                 <Save className="size-4" />
-                {saving ? "Сохраняем локально…" : "Сохранить попытку"}
+                {saving ? "Сохраняем…" : "Сохранить попытку"}
               </Button>
             </div>
           </CardBody>
@@ -747,12 +741,14 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
             </div>
             <ShieldCheck className="size-5 shrink-0 text-verified" aria-hidden="true" />
           </CardHeader>
-          <CardBody className="space-y-3 text-sm leading-6 text-secondary">
+          <details className="group">
+            <summary className="detent min-h-11 cursor-pointer list-none px-5 py-3 text-sm font-semibold text-primary hover:bg-recess [&::-webkit-details-marker]:hidden">Семь правил зачёта</summary>
+            <CardBody className="space-y-3 text-sm leading-6 text-secondary">
             <Clause folio="i">
-              Для свидетельства устной речи нужна сохранённая аудиозапись; одна транскрипция — лишь заметка о практике.
+              Чтобы попытка засчиталась как устная речь, нужна сохранённая аудиозапись; текст без аудио — лишь заметка о практике.
             </Clause>
             <Clause folio="ii">
-              Выражение должно появиться в редактируемой транскрипции, и вы должны его подтвердить.
+              Выражение должно появиться в вашей записи ответа, и вы должны его подтвердить.
             </Clause>
             <Clause folio="iii">
               Нужен контекстный ответ не короче пяти секунд и семи слов, включая минимум три слова помимо целевых фраз. Один повтор фразы остаётся тренировкой.
@@ -761,7 +757,7 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
               Чтение с опорой не повышает оценку активной речи.
             </Clause>
             <Clause folio="v">
-              Теневой повтор сохраняется как практика аудирования и произношения, но не как свидетельство свободной речи.
+              Теневой повтор сохраняется как тренировка слуха и произношения, а не как свободная речь.
             </Clause>
             <Clause folio="vi">
               Три раунда 60/45/30 считаются одним заданием; только финальный раунд планирует повторение.
@@ -769,13 +765,14 @@ function SpeakingStudio({ targetPhraseId, handoffSupportUsed = false }: { target
             <Clause folio="vii">
               Приложение не выдумывает оценку акцента, беглости, понимания или произношения.
             </Clause>
-          </CardBody>
+            </CardBody>
+          </details>
         </Card>
         <Card>
           <CardHeader>
             <div>
               <p className="section-kicker">Недавняя голосовая работа</p>
-              <h2 className="card-title">Локальная история попыток</h2>
+              <h2 className="card-title">История попыток</h2>
             </div>
             <span className="numeral shrink-0 text-lg text-secondary">{attempts.length}</span>
           </CardHeader>
@@ -843,13 +840,18 @@ function DailyListeningChallenge() {
   const now = useLocalToday();
   const dayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const promptBank = LISTENING_PROMPTS_BY_LEVEL[level];
-  const selectedPrompt = selectDailyListeningReference(phrases, level, dayKey, promptBank);
+  // «Ещё фраза»: каждый следующий раунд подмешивает счётчик в ключ выбора —
+  // та же детерминированная функция отдаёт другую фразу. Нагрузку выбирает
+  // пользователь, а не расписание.
+  const [dictationRound, setDictationRound] = useState(0);
+  const selectionKey = dictationRound === 0 ? dayKey : `${dayKey}·${dictationRound}`;
+  const selectedPrompt = selectDailyListeningReference(phrases, level, selectionKey, promptBank);
   const selectedPhrase = selectedPrompt.phraseId ? phrases.find((phrase) => phrase.id === selectedPrompt.phraseId) : undefined;
   const distractorMeanings = selectedPhrase ? [...new Set(phrases
     .filter((phrase) => phrase.id !== selectedPhrase.id && phrase.cefr === level && phrase.meaning.trim())
     .map(activationRecognitionLabel)
     .filter((meaning) => meaning && meaning !== activationRecognitionLabel(selectedPhrase)))].slice(0, 2) : [];
-  const fallbackPrompt = selectDailyListeningReference([], level, dayKey, promptBank);
+  const fallbackPrompt = selectDailyListeningReference([], level, selectionKey, promptBank);
   const prompt = selectedPhrase && distractorMeanings.length === 2
     ? (() => {
       const answer = activationRecognitionLabel(selectedPhrase);
@@ -862,6 +864,7 @@ function DailyListeningChallenge() {
   const reference = prompt.text;
   const [response, setResponse] = useState("");
   const [comprehensionAnswer, setComprehensionAnswer] = useState<number>();
+  const [lastScore, setLastScore] = useState<{ matched: number; total: number; needed: number; dictationOk: boolean; comprehensionOk: boolean } | null>(null);
   const [played, setPlayed] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [message, setMessage] = useState("");
@@ -876,6 +879,7 @@ function DailyListeningChallenge() {
     setComprehensionAnswer(undefined);
     setPlayed(false);
     setRevealed(false);
+    setLastScore(null);
     setMessage("");
     return () => {
       playbackTokenRef.current += 1;
@@ -885,7 +889,7 @@ function DailyListeningChallenge() {
 
   function playPrompt() {
     if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
-      setMessage("Системный голос недоступен в этой среде. Можно работать со своим фрагментом ниже.");
+      setMessage("Озвучка недоступна в этой среде. Можно работать со своим фрагментом ниже.");
       return;
     }
     window.speechSynthesis.cancel();
@@ -902,7 +906,7 @@ function DailyListeningChallenge() {
     utterance.onerror = () => {
       if (playbackToken !== playbackTokenRef.current) return;
       setPlayed(false);
-      setMessage("Системный голос не смог воспроизвести фразу. Попробуйте ещё раз или используйте свой фрагмент ниже.");
+      setMessage("Озвучка не сработала. Попробуйте ещё раз или используйте свой фрагмент ниже.");
     };
     window.speechSynthesis.speak(utterance);
     setMessage("Прослушайте фразу и запишите её без открытия текста.");
@@ -923,11 +927,12 @@ function DailyListeningChallenge() {
     }
     const dictationMatched = dictationMatches(response, reference);
     const comprehensionMatched = comprehensionAnswer === prompt.answerIndex;
+    setLastScore({ ...dictationWordScore(response, reference), dictationOk: dictationMatched, comprehensionOk: comprehensionMatched });
     const matched = dictationMatched && comprehensionMatched;
     setSaving(true);
     try {
       await recordAttempt({
-        sourceId: `daily-local-${level}-${dayKey}-${prompt.id}`,
+        sourceId: `daily-local-${level}-${dayKey}-${prompt.id}${dictationRound ? `-r${dictationRound}` : ""}`,
         mode: "dictation",
         response,
         answerMatched: matched,
@@ -943,7 +948,7 @@ function DailyListeningChallenge() {
       setMessage(matched && !revealed
         ? "Диктант и ответ по смыслу совпали. Шаг аудирования на сегодня сохранён."
         : matched
-          ? "Оба ответа совпали, но эталон уже был открыт: попытка сохранена как тренировка."
+          ? "Оба ответа совпали, но текст уже был открыт: попытка сохранена как тренировка."
           : !dictationMatched && !comprehensionMatched
             ? "Есть расхождения и в диктанте, и в ответе по смыслу. Попытка сохранена для разбора."
             : !dictationMatched
@@ -959,27 +964,26 @@ function DailyListeningChallenge() {
   return (
     <Card>
       <CardHeader>
-        <div><p className="section-kicker">Аудирование на сегодня · {level}</p><h2 className="card-title">Короткий локальный диктант</h2></div>
-        <Badge tone="teal">без загрузки в сеть</Badge>
+        <div><p className="section-kicker">Аудирование на сегодня · {level}</p><h2 className="card-title">Короткий диктант</h2></div>
       </CardHeader>
       <CardBody className="space-y-4">
-        <p className="text-sm leading-6 text-secondary">Сначала прослушайте системный английский голос без текста. Запишите всю фразу целиком. {prompt.phraseId ? 'Сегодняшний материал повторно использует выражение из вашей активированной базы.' : 'Если активированного контекста пока нет, используется проверенная фраза вашего уровня.'}</p>
+        <p className="text-sm leading-6 text-secondary">Прослушайте фразу без текста и запишите её целиком. {prompt.phraseId ? 'Сегодня озвучено выражение из ваших слов.' : 'Пока своих отработанных слов мало, звучит фраза вашего уровня.'}</p>
         <div className="rounded-[3px] bg-recess p-3 shadow-[var(--bevel-down)]">
           <p className="inspector-label">
             Порог зачёта · слов из <span className="numeral">{DICTATION_SAMPLE_WORDS}</span>
           </p>
           <Rule value={DICTATION_THRESHOLD_WORDS} max={DICTATION_SAMPLE_WORDS} className="mt-2" />
           <MarginNote className="xl:max-w-none xl:[transform:none]">
-            Из каждых <span className="numeral">{DICTATION_SAMPLE_WORDS}</span> слов не меньше{" "}
-            <span className="numeral">{DICTATION_THRESHOLD_WORDS}</span> должны совпасть и стоять на своих местах.
+            Например: в фразе из <span className="numeral">{DICTATION_SAMPLE_WORDS}</span> слов на местах должны стоять не меньше{" "}
+            <span className="numeral">{DICTATION_THRESHOLD_WORDS}</span>. Для короткой фразы порог ниже — точные числа появятся после проверки.
           </MarginNote>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" onClick={playPrompt}><Volume2 className="size-4" /> {played ? "Прослушать ещё раз" : "Прослушать фразу"}</Button>
-          <Button type="button" variant="ghost" onClick={() => setRevealed(true)} disabled={revealed || !response.trim() || comprehensionAnswer === undefined}><Eye className="size-4" /> {revealed ? "Подсказка открыта" : "Открыть только после попытки"}</Button>
+          <Button type="button" variant="ghost" onClick={() => setRevealed(true)} disabled={revealed || !response.trim() || comprehensionAnswer === undefined}><Eye className="size-4" /> {revealed ? "Разбор открыт" : lastScore ? "Показать разбор" : "Открыть только после попытки"}</Button>
         </div>
-        {revealed && <div className="relative rounded-[3px] border border-amber/30 bg-amber/5 p-3 pl-4"><span aria-hidden="true" className="absolute inset-y-3 left-0 w-[2px] bg-amber" /><p className="inspector-label">Эталон</p><p lang="en" className="set-text reading-en mt-2 text-sm leading-6 text-primary">{reference}</p>{prompt.phraseId && <p className="mt-2 text-xs text-teal">Повторно использовано: <span lang="en" className="reading-en">{phrases.find((phrase) => phrase.id === prompt.phraseId)?.canonical}</span></p>}<p className="mt-2 text-xs leading-5 text-muted">После открытия эталона попытка остаётся полезной тренировкой, но не закрывает шаг аудирования на сегодня.</p></div>}
-        <FieldShell label="Что вы услышали" htmlFor="daily-listening-response" hint="Ответ сохраняется локально только после нажатия «Проверить». ">
+        {revealed && <div className="relative rounded-[3px] border border-amber/30 bg-amber/5 p-3 pl-4"><span aria-hidden="true" className="absolute inset-y-3 left-0 w-[2px] bg-amber" /><p className="inspector-label">Текст фразы</p><p lang="en" className="set-text reading-en mt-2 text-sm leading-6 text-primary">{reference}</p>{prompt.phraseId && <p className="mt-2 text-xs text-teal">Из ваших слов: <span lang="en" className="reading-en">{phrases.find((phrase) => phrase.id === prompt.phraseId)?.canonical}</span></p>}<p className="mt-2 text-xs leading-5 text-muted">После открытия текста попытка считается тренировкой.</p>{lastScore && <div className="mt-3"><p className="inspector-label">Пословное сравнение · зачёркнуто — не расслышано · подчёркнуто — лишнее или заменённое</p><Diff before={reference} after={response} className="mt-2" /></div>}</div>}
+        <FieldShell label="Что вы услышали" htmlFor="daily-listening-response" hint="Ответ сохраняется после нажатия «Проверить и сохранить».">
           <Textarea id="daily-listening-response" lang="en" value={response} onChange={(event) => setResponse(event.target.value)} className="min-h-24" />
         </FieldShell>
         {prompt.question && prompt.choices && (() => {
@@ -1016,9 +1020,23 @@ function DailyListeningChallenge() {
             </fieldset>
           );
         })()}
+        {lastScore && (
+          <div className="rounded-[3px] bg-recess p-4 shadow-[var(--bevel-down)]">
+            {lastScore.dictationOk && lastScore.comprehensionOk
+              ? <p><span className="dialog-in label-caps inline-block rounded-[2px] border border-verified/60 px-2.5 py-1 text-verified [transform:rotate(-2deg)]">Зачёт ✓</span></p>
+              : <p className="text-base font-semibold text-amber">Пока не зачёт</p>}
+            <p className="numeral mt-1 text-sm text-secondary">Слова на местах: {lastScore.matched} из {lastScore.total} · для зачёта нужно не меньше {lastScore.needed}</p>
+            <p className="mt-1 text-sm text-secondary">Вопрос по смыслу: {lastScore.comprehensionOk ? "верно" : "пока неверно"}</p>
+            {!revealed && <p className="mt-2 text-xs leading-5 text-muted">Кнопка «Показать разбор» откроет текст фразы и пословное сравнение.</p>}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="secondary" onClick={() => { setResponse(""); setComprehensionAnswer(undefined); setLastScore(null); setRevealed(false); setMessage("Ещё попытка: прослушайте и запишите фразу заново."); }}>Повторить эту фразу</Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => setDictationRound((value) => value + 1)}>Новая фраза <ArrowRight className="size-4" /></Button>
+            </div>
+          </div>
+        )}
         <div className="rule-double" />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p role="status" aria-live="polite" className="text-xs leading-5 text-muted">{message || "Засчитывается только совпавший ответ без открытого эталона."}</p>
+          <p role="status" aria-live="polite" className="text-xs leading-5 text-muted">{message || "Засчитывается только ответ, совпавший без подсказки."}</p>
           <Button type="button" onClick={() => void check()} disabled={saving || !response.trim() || comprehensionAnswer === undefined}><CheckCircle2 className="size-4" /> {saving ? "Сохраняем…" : "Проверить и сохранить"}</Button>
         </div>
       </CardBody>
@@ -1044,9 +1062,9 @@ function ListeningLibrary() {
     if (!file) return;
     try {
       setTranscript(await readTranscriptFile(file));
-      setMessage(`Транскрипция «${file.name}» импортирована локально. Проверьте текст перед сохранением.`);
+      setMessage(`Текст «${file.name}» импортирован. Проверьте его перед сохранением.`);
     } catch (error) {
-      setMessage(localizeVoiceError(error, error instanceof Error ? error.message : "Не удалось прочитать транскрипцию."));
+      setMessage(localizeVoiceError(error, error instanceof Error ? error.message : "Не удалось прочитать текст."));
     } finally {
       if (transcriptFileRef.current) transcriptFileRef.current.value = "";
     }
@@ -1079,7 +1097,7 @@ function ListeningLibrary() {
       setSource("");
       setTranscript("");
       setRecorderKey((value) => value + 1);
-      setMessage("Фрагмент сохранён локально. Сначала прослушайте его без текста и только потом откройте транскрипцию.");
+      setMessage("Фрагмент сохранён. Сначала прослушайте его без текста и только потом откройте текст.");
     } catch (error) {
       const cleanupFailed = !(await deleteRecording(recordingId).then(() => true, () => false));
       setMessage(
@@ -1093,16 +1111,16 @@ function ListeningLibrary() {
 
   async function deleteClip(id: string) {
     const clip = clips.find((item) => item.id === id);
-    if (!clip || !window.confirm(`Удалить «${clip.title}» и связанное локальное аудио?`))
+    if (!clip || !window.confirm(`Удалить «${clip.title}» вместе с аудио?`))
       return;
     try {
       const recordingId = await removeClip(id);
       if (recordingId) {
         try {
           await deleteRecording(recordingId);
-          setMessage("Фрагмент и локальное аудио удалены.");
+          setMessage("Фрагмент и аудио удалены.");
         } catch {
-          setMessage("Данные фрагмента удалены, но лишний аудиофайл удалить не удалось. Приложение повторит очистку при запуске.");
+          setMessage("Фрагмент удалён, но аудиофайл удалить не удалось. Приложение допочистит его при запуске.");
         }
       }
     } catch (error) {
@@ -1113,89 +1131,6 @@ function ListeningLibrary() {
   return (
     <div className="space-y-6">
       <DailyListeningChallenge />
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <AudioRecorderPanel
-          key={recorderKey}
-          allowSystemAudio
-          title="Добавьте фрагмент для аудирования"
-          description="Импортируйте короткий фрагмент, используйте микрофон или явно выберите разрешённый источник звука экрана/приложения. Аудио остаётся локальным."
-          maxDurationSeconds={300}
-          onAudioReady={(next) => {
-            setCapture(next);
-            if (!title && next.fileName)
-              setTitle(next.fileName.replace(/\.[^.]+$/, ""));
-          }}
-          onClear={() => setCapture(undefined)}
-        />
-        <Card>
-          <CardHeader>
-            <div>
-              <p className="section-kicker">Данные фрагмента</p>
-              <h2 className="card-title">Подготовьте аудирование без текста</h2>
-            </div>
-            <FileAudio className="size-5 shrink-0 text-verified" aria-hidden="true" />
-          </CardHeader>
-          <CardBody className="space-y-4">
-            <FieldShell label="Название" htmlFor="clip-title">
-              <Input
-                id="clip-title"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Фрагмент подкаста · принятие решений"
-              />
-            </FieldShell>
-            <FieldShell label="Источник" htmlFor="clip-source">
-              <Input
-                id="clip-source"
-                value={source}
-                onChange={(event) => setSource(event.target.value)}
-                placeholder="Локальный файл, лекция, встреча…"
-              />
-            </FieldShell>
-            <FieldShell
-              label="Эталонная транскрипция · необязательно"
-              htmlFor="clip-transcript"
-              hint="Введите текст или импортируйте локальный TXT, SRT либо VTT до 512 КиБ. Таймкоды удаляются; результат всегда можно исправить вручную."
-            >
-              <Textarea
-                id="clip-transcript"
-                lang="en"
-                value={transcript}
-                onChange={(event) => setTranscript(event.target.value)}
-                className="min-h-28"
-              />
-            </FieldShell>
-            <input
-              ref={transcriptFileRef}
-              type="file"
-              accept=".txt,.srt,.vtt,text/plain,application/x-subrip,text/vtt"
-              className="sr-only"
-              tabIndex={-1}
-              onChange={(event) => void importTranscript(event.target.files?.[0])}
-            />
-            <Button type="button" variant="secondary" onClick={() => transcriptFileRef.current?.click()}>
-              <Upload className="size-4" /> Импортировать TXT / SRT / VTT
-            </Button>
-            <div className="flex flex-col gap-3 border-t border-border pt-4">
-              <p
-                role="status"
-                aria-live="polite"
-                className="text-xs leading-5 text-muted"
-              >
-                {message ||
-                  "Сохранение фрагмента само по себе не означает, что он понят или изучен."}
-              </p>
-              <Button
-                onClick={() => void saveClip()}
-                disabled={!capture || saving}
-              >
-                <Save className="size-4" />
-                {saving ? "Сохраняем…" : "Сохранить в библиотеку"}
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
-      </section>
       <Card>
         <CardHeader>
           <div>
@@ -1203,7 +1138,7 @@ function ListeningLibrary() {
             <h2 className="card-title">Сначала повтор, затем текст</h2>
           </div>
           <p className="inspector-label shrink-0">
-            локальных фрагментов: <span className="numeral text-secondary">{clips.length}</span>
+            фрагментов: <span className="numeral text-secondary">{clips.length}</span>
           </p>
         </CardHeader>
         <CardBody className="grid gap-4 lg:grid-cols-2">
@@ -1223,26 +1158,106 @@ function ListeningLibrary() {
                   Фрагментов для аудирования пока нет.
                 </p>
                 <p className="mt-1">
-                  Импортируйте короткий смысловой фрагмент и добавьте транскрипцию, если она у вас есть.
+                  Добавьте свой материал ниже — подкаст, лекцию или свою запись.
                 </p>
               </div>
             </div>
           )}
         </CardBody>
       </Card>
-      <Card level="recess">
-        <CardBody className="flex items-start gap-4">
-          <AudioLines className="mt-1 size-5 shrink-0 text-amber" aria-hidden="true" />
-          <div>
-            <p className="label-caps text-secondary">
-              Локальная транскрипция работает вручную
-            </p>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-secondary">
-              Приложение полноценно работает без речевой модели: транскрипцию можно ввести вручную или импортировать из локального TXT/SRT/VTT. Будущий локальный адаптер Whisper останется опциональным, а его текст — редактируемым и не станет оценкой произношения.
-            </p>
-          </div>
-        </CardBody>
-      </Card>
+      <details className="rounded-[3px] border border-border bg-elevated shadow-[var(--lift-1)]">
+        <summary className="detent min-h-11 cursor-pointer rounded-[3px] px-4 py-3 text-sm font-semibold text-primary hover:bg-recess">
+          Добавить свой материал (подкаст, лекция — по желанию)
+        </summary>
+        <section className="grid gap-6 border-t border-border p-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+          <AudioRecorderPanel
+            key={recorderKey}
+            allowSystemAudio
+            title="Добавьте фрагмент для аудирования"
+            description="Импортируйте файл, запишите с микрофона или со звука экрана — до пяти минут."
+            maxDurationSeconds={300}
+            onAudioReady={(next) => {
+              setCapture(next);
+              if (!title && next.fileName)
+                setTitle(next.fileName.replace(/\.[^.]+$/, ""));
+            }}
+            onClear={() => setCapture(undefined)}
+          />
+          <Card>
+            <CardHeader>
+              <div>
+                <p className="section-kicker">Данные фрагмента</p>
+                <h2 className="card-title">Подготовьте аудирование без текста</h2>
+                <ol className="mt-2 space-y-1 text-xs leading-5 text-muted">
+                  <li><span className="numeral">1.</span> Запишите или импортируйте до пяти минут звука: подкаст, лекция, свой голос.</li>
+                  <li><span className="numeral">2.</span> По желанию вставьте текст фрагмента — тогда после прослушивания будет диктант с проверкой.</li>
+                  <li><span className="numeral">3.</span> Нажмите «Сохранить в библиотеку» — фрагмент появится выше, в «Аудирование без текста».</li>
+                </ol>
+              </div>
+              <FileAudio className="size-5 shrink-0 text-verified" aria-hidden="true" />
+            </CardHeader>
+            <CardBody className="space-y-4">
+              <FieldShell label="Название" htmlFor="clip-title">
+                <Input
+                  id="clip-title"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Фрагмент подкаста · принятие решений"
+                />
+              </FieldShell>
+              <FieldShell label="Источник" htmlFor="clip-source">
+                <Input
+                  id="clip-source"
+                  value={source}
+                  onChange={(event) => setSource(event.target.value)}
+                  placeholder="Файл, лекция, встреча…"
+                />
+              </FieldShell>
+              <FieldShell
+                label="Текст фрагмента (по желанию)"
+                htmlFor="clip-transcript"
+                hint="Введите текст или импортируйте файл TXT, SRT или VTT."
+              >
+                <Textarea
+                  id="clip-transcript"
+                  lang="en"
+                  value={transcript}
+                  onChange={(event) => setTranscript(event.target.value)}
+                  className="min-h-28"
+                />
+              </FieldShell>
+              <input
+                ref={transcriptFileRef}
+                type="file"
+                accept=".txt,.srt,.vtt,text/plain,application/x-subrip,text/vtt"
+                className="sr-only"
+                tabIndex={-1}
+                onChange={(event) => void importTranscript(event.target.files?.[0])}
+              />
+              <Button type="button" variant="secondary" onClick={() => transcriptFileRef.current?.click()}>
+                <Upload className="size-4" /> Импортировать TXT / SRT / VTT
+              </Button>
+              <div className="flex flex-col gap-3 border-t border-border pt-4">
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="text-xs leading-5 text-muted"
+                >
+                  {message ||
+                    "Фрагмент появится выше, в «Аудирование без текста»."}
+                </p>
+                <Button
+                  onClick={() => void saveClip()}
+                  disabled={!capture || saving}
+                >
+                  <Save className="size-4" />
+                  {saving ? "Сохраняем…" : "Сохранить в библиотеку"}
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
+        </section>
+      </details>
     </div>
   );
 }
@@ -1307,7 +1322,7 @@ function ListeningClipCard({
         ),
       );
     } catch (caught) {
-      setError(localizeVoiceError(caught, "Локальное аудио недоступно."));
+      setError(localizeVoiceError(caught, "Аудио недоступно."));
     } finally {
       setLoading(false);
     }
@@ -1353,6 +1368,7 @@ function ListeningClipCard({
       return;
     }
     const matched = Boolean(clip.transcript.trim()) && dictationMatches(dictation, clip.transcript);
+    const score = clip.transcript.trim() ? dictationWordScore(dictation, clip.transcript) : undefined;
     setSavingPractice(true);
     try {
       await recordAttempt({
@@ -1367,10 +1383,10 @@ function ListeningClipCard({
         durationSeconds: Math.min(300, Math.max(1, audioRef.current?.currentTime || clip.durationSeconds)),
       });
       setPracticeMessage(matched && !revealUsedEver
-        ? "Диктант совпал: шаг аудирования сохранён."
+        ? `Диктант совпал: шаг аудирования сохранён.${score ? ` Слова на местах: ${score.matched} из ${score.total}.` : ""}`
         : clip.transcript.trim()
-          ? "Попытка сохранена как тренировка. Исправьте расхождения и попробуйте без открытого текста."
-          : "Заметка по аудированию без текста сохранена. Без эталона приложение не отмечает точное совпадение.");
+          ? `Попытка сохранена как тренировка.${score ? ` Слова на местах: ${score.matched} из ${score.total}, для зачёта нужно не меньше ${score.needed}.` : ""} Исправьте расхождения и попробуйте без открытого текста.`
+          : "Заметка сохранена. Без текста фрагмента совпадение не проверяется.");
     } catch (caught) {
       setPracticeMessage(localizeVoiceError(caught, "Не удалось сохранить попытку аудирования."));
     } finally {
@@ -1438,7 +1454,7 @@ function ListeningClipCard({
           <FieldShell label="Источник" htmlFor={`edit-source-${clip.id}`}>
             <Input id={`edit-source-${clip.id}`} value={editSource} onChange={(event) => setEditSource(event.target.value)} />
           </FieldShell>
-          <FieldShell label="Эталонная транскрипция" htmlFor={`edit-transcript-${clip.id}`}>
+          <FieldShell label="Текст фрагмента" htmlFor={`edit-transcript-${clip.id}`}>
             <Textarea id={`edit-transcript-${clip.id}`} lang="en" value={editTranscript} onChange={(event) => { setEditTranscript(event.target.value); if (event.target.value.trim()) setRevealUsedEver(true) }} className="min-h-28" />
           </FieldShell>
           <div className="flex justify-end gap-2">
@@ -1449,9 +1465,9 @@ function ListeningClipCard({
       )}
       {clip.quarantine ? (
         <div role="alert" className="mt-4">
-          <Stamp caption="карантин импорта">
+          <Stamp caption="слишком длинный фрагмент">
             <p className="text-xs leading-5">
-              Фрагмент длиннее 300 секунд сохранён вместе с исходной длительностью и ссылкой на локальное аудио, но исключён из практики. Обрежьте исходник до пяти минут и импортируйте его как новый фрагмент; этот архивный элемент можно переименовать или удалить.
+              Фрагмент длиннее пяти минут сохранён, но исключён из практики. Обрежьте исходник до пяти минут и добавьте его заново; этот можно переименовать или удалить.
             </p>
           </Stamp>
         </div>
@@ -1527,7 +1543,7 @@ function ListeningClipCard({
           disabled={loading}
         >
           <Headphones className="size-4" />
-          {loading ? "Загружаем локальное аудио…" : "Загрузить локальное аудио"}
+          {loading ? "Загружаем аудио…" : "Загрузить аудио"}
         </Button>
       )}
       {error && (
@@ -1540,17 +1556,17 @@ function ListeningClipCard({
           <Textarea id={`dictation-${clip.id}`} lang="en" value={dictation} onChange={(event) => setDictation(event.target.value)} className="min-h-24" />
         </FieldShell>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p role="status" aria-live="polite" className="text-xs leading-5 text-muted">{practiceMessage || "Совпадение проверяется только при наличии эталонной транскрипции."}</p>
+          <p role="status" aria-live="polite" className="text-xs leading-5 text-muted">{practiceMessage || "Совпадение проверяется, только если у фрагмента есть текст."}</p>
           <Button type="button" size="sm" onClick={() => void saveListeningPractice()} disabled={savingPractice || !dictation.trim() || !playbackCompleted}><CheckCircle2 className="size-4" /> {savingPractice ? "Сохраняем…" : "Проверить и сохранить"}</Button>
         </div>
       </div>
       <div className="mt-4 border-t border-border pt-4">
         {revealed ? (
           <div>
-            <p className="inspector-label">Эталонная транскрипция</p>
-            {clip.transcript ? <p lang="en" className="reading-en mt-2 whitespace-pre-wrap text-sm leading-6 text-secondary">{clip.transcript}</p> : <p className="mt-2 text-sm leading-6 text-secondary">Для этого фрагмента транскрипция не сохранена.</p>}
-            {clip.transcript && <p className="mt-3 rounded-[3px] bg-recess p-3 text-xs leading-5 text-secondary shadow-[var(--bevel-down)]"><strong className="text-primary">Теневое повторение:</strong> зациклите одну смысловую группу, прослушайте один раз, повторите без текста, затем откройте и сравните. Запишите попытку на вкладке «Речь», если хотите отметить её в маршруте дня.</p>}
-            {clip.transcript && <div className="mt-3 rounded-[3px] bg-recess p-3 shadow-[var(--bevel-down)]"><FieldShell label="Незнакомое слово или выражение" htmlFor={`unknown-${clip.id}`} hint="Сохранится вместе с транскриптом как контекстом; значение можно дополнить в «Моих словах»."><div className="flex flex-col gap-2 sm:flex-row"><Input id={`unknown-${clip.id}`} lang="en" className="reading-en" value={unknownExpression} onChange={(event) => setUnknownExpression(event.target.value)} placeholder="make up for" /><Button type="button" size="sm" variant="secondary" onClick={saveUnknownExpression} disabled={!unknownExpression.trim()}><Save className="size-4" /> В «Мои слова»</Button></div></FieldShell></div>}
+            <p className="inspector-label">Текст фрагмента</p>
+            {clip.transcript ? <p lang="en" className="reading-en mt-2 whitespace-pre-wrap text-sm leading-6 text-secondary">{clip.transcript}</p> : <p className="mt-2 text-sm leading-6 text-secondary">Для этого фрагмента текст не сохранён.</p>}
+            {clip.transcript && <p className="mt-3 rounded-[3px] bg-recess p-3 text-xs leading-5 text-secondary shadow-[var(--bevel-down)]"><strong className="text-primary">Теневой повтор:</strong> зациклите одну фразу, прослушайте, повторите без текста, затем откройте и сравните. Запишите попытку на вкладке «Говорить», если хотите её засчитать.</p>}
+            {clip.transcript && <div className="mt-3 rounded-[3px] bg-recess p-3 shadow-[var(--bevel-down)]"><FieldShell label="Незнакомое слово или выражение" htmlFor={`unknown-${clip.id}`} hint="Сохранится с текстом фрагмента как контекстом; значение можно дополнить в «Моих словах»."><div className="flex flex-col gap-2 sm:flex-row"><Input id={`unknown-${clip.id}`} lang="en" className="reading-en" value={unknownExpression} onChange={(event) => setUnknownExpression(event.target.value)} placeholder="make up for" /><Button type="button" size="sm" variant="secondary" onClick={saveUnknownExpression} disabled={!unknownExpression.trim()}><Save className="size-4" /> В «Мои слова»</Button></div></FieldShell></div>}
           </div>
         ) : (
           <p className="text-xs leading-5 text-muted">
@@ -1564,7 +1580,7 @@ function ListeningClipCard({
           onClick={() => setRevealed((value) => { if (!value) setRevealUsedEver(true); return !value })}
         >
           <Eye className="size-4" />
-          {revealed ? "Скрыть транскрипцию" : "Открыть транскрипцию"}
+          {revealed ? "Скрыть текст" : "Открыть текст"}
         </Button>
       </div></>}
     </article>

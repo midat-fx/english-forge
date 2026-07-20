@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
 import { AlertCircle, ArrowRight, Check, LibraryBig, Plus, Target } from 'lucide-react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
@@ -15,7 +15,7 @@ import { grammarAcademyLessons } from '../data/grammarAcademy'
 import { buildGrammarCheckpoint, dueGrammarLessonIds } from '../data/grammarCheckpoint'
 import { recommendedPlacementLessonIdsFromAnswers } from '../data/placementTest'
 import { activationBacklogSize, activationBlockedByMissingErrorPattern, activationDailyQuota, activationNewEnrollmentLimit, activationWorkDoneToday, hasQualifiedActivationThrough } from '../domain/activation'
-import { DAILY_NEW_ITEM_COUNT, dailyVocabularyItems, localDayKey, resolveDailyVocabularyAssignment } from '../domain/dailyVocabulary'
+import { dailyVocabularyItems, localDayKey, resolveDailyVocabularyAssignment } from '../domain/dailyVocabulary'
 import { useLexicalCatalogLevel } from '../hooks/useLexicalCatalogLevel'
 import { useLocalToday } from '../hooks/useLocalToday'
 import { calculateProgress } from '../domain/progress'
@@ -54,6 +54,7 @@ export function DashboardPage() {
   const [message, setMessage] = useState('')
   const metrics = calculateProgress(store)
   const level = store.preferences.currentLevel
+  const dailyNewTarget = Math.min(30, Math.max(1, store.preferences.dailyNewWords ?? 10))
   const { items: levelCatalog, error: catalogError, loading: catalogLoading } = useLexicalCatalogLevel(level)
   const lessons = grammarAcademyLessons.filter((lesson) => lesson.level === level)
   const completedLessons = new Set(store.grammarProgress.filter((item) => item.completedAt).map((item) => item.lessonId))
@@ -72,29 +73,16 @@ export function DashboardPage() {
   const dueGrammarIds = dueGrammarLessonIds(grammarAcademyLessons, store.grammarProgress, level, today)
   const correctiveLesson = dueGrammarIds.length === 1 ? grammarAcademyLessons.find((lesson) => lesson.id === dueGrammarIds[0]) : undefined
   const nextLesson = correctiveLesson ?? errorLesson ?? placementLesson ?? strugglingLesson ?? lessons.find((lesson) => !completedLessons.has(lesson.id)) ?? lessons[0]
-  // Почему выбран именно этот урок. Единственное место, где программа объясняет
-  // свой выбор пользователю, — без него строка оглавления сообщает «что», но не «почему».
-  const grammarRecommendationReason = correctiveLesson
-    ? 'Точечное возвращение единственной темы, срок повторения которой наступил'
-    : errorLesson
-      ? `По категории и формулировке записи Error Lab: ${activeError?.label}`
-      : activeError
-        ? 'Следующая тема программы; для текущей записи Error Lab нет надёжного соответствия уроку'
-        : placementLesson
-          ? 'По результатам диагностики'
-          : strugglingLesson
-            ? 'По последней сложной проверке'
-            : `Следующая тема уровня ${level}`
   const cumulativeDueCount = buildGrammarCheckpoint(grammarAcademyLessons, store.grammarProgress, level, today).length
   const needsFoundationReview = (latestPlacement?.bandScores.A2.correct ?? 8) < 5
   const recent = store.phrases.filter((phrase) => phrase.status !== 'archived').sort((left, right) => right.createdAt.localeCompare(left.createdAt)).slice(0, 5)
   const wordsAtLevel = store.phrases.filter((phrase) => phrase.status !== 'archived' && phrase.cefr === level).length
   const dailyResolution = useMemo(
-    () => levelCatalog ? resolveDailyVocabularyAssignment(levelCatalog, level, store.phrases, today, DAILY_NEW_ITEM_COUNT, store.dailyVocabularyAssignments.find((item) => item.dayKey === localDayKey(today) && item.level === level) ?? store.dailyVocabularyAssignment, store.dailyVocabularyAssignments) : null,
-    [level, levelCatalog, store.dailyVocabularyAssignment, store.dailyVocabularyAssignments, store.phrases, today],
+    () => levelCatalog ? resolveDailyVocabularyAssignment(levelCatalog, level, store.phrases, today, dailyNewTarget, store.dailyVocabularyAssignments.find((item) => item.dayKey === localDayKey(today) && item.level === level) ?? store.dailyVocabularyAssignment, store.dailyVocabularyAssignments) : null,
+    [dailyNewTarget, level, levelCatalog, store.dailyVocabularyAssignment, store.dailyVocabularyAssignments, store.phrases, today],
   )
   const dailyAssignment = dailyResolution?.assignment ?? null
-  const dailyItems = useMemo(() => levelCatalog && dailyAssignment ? dailyVocabularyItems(levelCatalog, level, store.phrases, today, DAILY_NEW_ITEM_COUNT, dailyAssignment, store.dailyVocabularyAssignments) : [], [dailyAssignment, level, levelCatalog, store.dailyVocabularyAssignments, store.phrases, today])
+  const dailyItems = useMemo(() => levelCatalog && dailyAssignment ? dailyVocabularyItems(levelCatalog, level, store.phrases, today, dailyNewTarget, dailyAssignment, store.dailyVocabularyAssignments) : [], [dailyAssignment, dailyNewTarget, level, levelCatalog, store.dailyVocabularyAssignments, store.phrases, today])
   const enrolledDailyIds = useMemo(() => new Set(dailyAssignment?.enrolledIds ?? []), [dailyAssignment?.enrolledIds])
   const previewedDailyIds = useMemo(() => new Set(dailyAssignment?.previewedIds ?? []), [dailyAssignment?.previewedIds])
   const dailyLearned = enrolledDailyIds.size
@@ -169,12 +157,12 @@ export function DashboardPage() {
   }
 
   const nextAction = pendingDailyDiscoveries || pendingDailyEnrollments
-    ? { label: 'Открыть новые слова', to: '/library' }
+    ? { label: 'Открыть новые слова', to: '/cards' }
     : reviewPlan.remaining
-      ? { label: 'Начать повторение', to: '/practice' }
+      ? { label: 'Начать повторение', to: '/cards' }
       : activationRemaining
-        ? { label: 'Продолжить отработку', to: '/practice' }
-        : { label: 'Открыть практику', to: '/practice' }
+        ? { label: 'Продолжить отработку', to: '/cards' }
+        : { label: 'Открыть практику', to: '/cards' }
 
   const issueDate = today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
 
@@ -184,7 +172,7 @@ export function DashboardPage() {
       id: 'vocabulary',
       folio: 'I',
       title: 'Новые слова',
-      detail: <>Знакомство <N>{dailyPreviewed}/{dailyItems.length}</N> правильных ответов · взято в отработку <N>{Math.min(dailyLearned, dailySelectionTarget)}/{dailySelectionTarget}</N> · <N>{activationDoneToday}/{activationQuota}</N> следующих шагов · хвост: <N>{activationBacklog}</N></>,
+      detail: <>Знакомство <N>{dailyPreviewed}/{dailyItems.length}</N> · отработка <N>{activationDoneToday}/{activationQuota}</N></>,
       time: pendingDailyDiscoveries || pendingDailyEnrollments ? '≈ 4 мин на извлечение' : activationRemaining ? `≈ ${estimatePracticeMinutes(activationRemaining)} мин` : 'Готово',
       to: pendingDailyDiscoveries || pendingDailyEnrollments ? '/library' : '/practice',
       done: vocabularyDoneToday,
@@ -193,7 +181,7 @@ export function DashboardPage() {
       id: 'grammar',
       folio: 'II',
       title: 'Грамматика',
-      detail: cumulativeDueCount === 1 && correctiveLesson ? `Точечное возвращение: ${correctiveLesson.title}` : cumulativeDueCount > 1 ? <>Накопительная проверка: пора вернуть <N>{cumulativeDueCount}</N> тем</> : nextLesson ? `${nextLesson.title} · ${grammarRecommendationReason}` : `Урок уровня ${level}`,
+      detail: cumulativeDueCount === 1 && correctiveLesson ? `Точечное возвращение: ${correctiveLesson.title}` : cumulativeDueCount > 1 ? <>Накопительная проверка: пора вернуть <N>{cumulativeDueCount}</N> тем</> : nextLesson ? nextLesson.title : `Урок уровня ${level}`,
       time: '≈ 7 мин',
       to: cumulativeDueCount ? '/grammar' : `/grammar${nextLesson ? `?lesson=${nextLesson.id}` : ''}`,
       done: grammarDoneToday,
@@ -205,8 +193,8 @@ export function DashboardPage() {
       detail: rawWrittenReviewBacklog === 0
         ? 'На сегодня нет заданий по расписанию'
         : reviewPlan.quota
-          ? <><N>{reviewPlan.completed}/{reviewPlan.quota}</N> по плану · всего накопилось: <N>{rawWrittenReviewBacklog}</N> · доступно самостоятельно сейчас: <N>{actionableDue}</N></>
-          : <>Всего накопилось: <N>{rawWrittenReviewBacklog}</N> · доступно самостоятельно сейчас: <N>0</N> после недавнего показа ответа</>,
+          ? <><N>{reviewPlan.completed}/{reviewPlan.quota}</N> по плану</>
+          : <>Пауза после показа ответа — задания вернутся чуть позже</>,
       time: reviewPlan.remaining ? `≈ ${plannedPracticeMinutes} мин` : 'План выполнен',
       to: '/practice',
       done: reviewsDoneToday,
@@ -224,7 +212,7 @@ export function DashboardPage() {
       id: 'speaking',
       folio: 'V',
       title: 'Речь',
-      detail: <>Записанный ответ без открытой подсказки · ждут шага <N>7</N>: <N>{awaitingStageSevenIds.size}</N> · устных повторов по сроку: <N>{dueSpokenIds.size}</N></>,
+      detail: <>Записанный ответ без подсказки{dueSpokenIds.size ? <> · по сроку: <N>{dueSpokenIds.size}</N></> : null}</>,
       time: '≈ 4 мин',
       to: '/voice',
       done: speakingDoneToday,
@@ -248,7 +236,7 @@ export function DashboardPage() {
   }))
 
   return (
-    <div className="space-y-7">
+    <div>
       {/* 1 · КОЛОНТИТУЛ — в потоке, без плиты */}
       <header className="rule-double flex flex-wrap items-baseline justify-between gap-x-8 gap-y-1 pb-2.5">
         <p className="section-kicker">English Forge · выпуск от {issueDate}</p>
@@ -256,18 +244,21 @@ export function DashboardPage() {
       </header>
 
       {/* 2 · ГЕРОЙ — единственный крупный объект первого экрана */}
-      <Card level="leaf" className="p-6 sm:p-9">
+      <Card level="leaf" className="mt-6 p-7 sm:p-12">
         <Badge tone="ember">{needsFoundationReview ? 'Сначала укрепляем основы A2' : `Ваш рабочий уровень: ${level}`}</Badge>
-        <h2 className="mt-5 max-w-3xl text-display font-light tracking-[-0.02em] text-primary">Двигаемся к {store.preferences.targetLevel} без перегрузки.</h2>
+        <h2 className="mt-5 max-w-3xl text-balance text-display font-light tracking-[-0.02em] text-primary">Двигаемся к {store.preferences.targetLevel} без перегрузки.</h2>
         <p className="mt-4 max-w-2xl text-base leading-7 text-secondary">Несколько полезных выражений, одна понятная тема грамматики и короткое повторение уже дают хороший ежедневный шаг.</p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Link to={nextAction.to} className={buttonClass({ variant: 'ember', size: 'lg' })}>{nextAction.label} <ArrowRight className="size-4" aria-hidden="true" /></Link>
-          <Link to="/level-test" className={buttonClass({ variant: 'secondary', size: 'lg' })}>{latestPlacement ? 'Пройти тест заново' : 'Пройти диагностику'}</Link>
+          <Link to="/level-test" className={buttonClass({ variant: 'ghost', size: 'lg' })}>{latestPlacement ? 'Пройти тест заново' : 'Пройти диагностику'}</Link>
         </div>
+        <p className="inspector-label mt-6">
+          Сегодня <N>{completedRouteSteps}/5</N> шагов · весь маршрут ≈ <N>{fullRouteMinutes}</N> мин
+        </p>
       </Card>
 
       {/* 3 · ОГЛАВЛЕНИЕ ВЫПУСКА — единственный носитель маршрута дня */}
-      <section aria-labelledby="daily-route-title">
+      <section aria-labelledby="daily-route-title" className="mt-9">
         <Card level="leaf">
           <CardHeader className="flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <div className="min-w-0">
@@ -287,7 +278,7 @@ export function DashboardPage() {
       </section>
 
       {/* 4 · ВЫХОДНЫЕ ДАННЫЕ — одна строка, волосяные разделители */}
-      <Card level="recess" className="grid grid-cols-2 sm:grid-cols-4">
+      <Card level="recess" className="mt-3 grid grid-cols-2 sm:grid-cols-4">
         <SimpleMetric value={wordsAtLevel} label={`сохранено на ${level}`} />
         <SimpleMetric value={metrics.due} label="нужно повторить" divider />
         <SimpleMetric value={completedLessons.size} label="тем проверено дважды" divider className="border-t border-border sm:border-t-0" />
@@ -295,7 +286,7 @@ export function DashboardPage() {
       </Card>
 
       {/* 5 · СЕГОДНЯШНИЕ 10 СЛОВ */}
-      <section className="overflow-hidden rounded-[3px] border border-border bg-surface shadow-[var(--lift-1)]">
+      <section className="mt-9 overflow-hidden rounded-[3px] border border-border bg-surface shadow-[var(--lift-1)]">
         <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="min-w-0">
             <p className="section-kicker">План на сегодня</p>
@@ -305,9 +296,9 @@ export function DashboardPage() {
           <Link to="/library" className={buttonClass({ variant: 'secondary', size: 'lg', className: 'shrink-0' })}>Открыть набор <ArrowRight className="size-4" aria-hidden="true" /></Link>
         </div>
         {catalogError && <p role="alert" className="m-5 rounded-[3px] border border-rubric/40 bg-rubric-soft p-4 text-sm text-ember-text">{catalogError} Перезапустите приложение и попробуйте снова.</p>}
-        <div aria-busy={catalogLoading} className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-5">
+        <div aria-busy={catalogLoading} className="stagger grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-5">
           {catalogLoading
-            ? Array.from({ length: DAILY_NEW_ITEM_COUNT }, (_, index) => (
+            ? Array.from({ length: dailyNewTarget }, (_, index) => (
               <div key={index} className="min-h-24 animate-pulse bg-surface p-4 shadow-[var(--bevel-down)] motion-reduce:animate-none">
                 <div className="h-3 w-8 rounded-[2px] bg-elevated" />
                 <div className="mt-3 h-4 w-3/4 rounded-[2px] bg-elevated" />
@@ -318,13 +309,13 @@ export function DashboardPage() {
               const learned = enrolledDailyIds.has(item.id)
               const discovered = previewedDailyIds.has(item.id)
               return (
-                <div key={item.id} className="group relative bg-surface p-4 shadow-[var(--bevel-down)] transition-colors hover:bg-elevated">
+                <div key={item.id} className="group relative sheet-in bg-surface p-4 shadow-[var(--bevel-down)] transition-colors hover:bg-elevated" style={{ '--i': Math.min(index, 7) } as CSSProperties}>
                   <div className="flex items-center justify-between">
                     <span className="numeral text-xs text-muted">{String(index + 1).padStart(2, '0')}</span>
                     {learned
                       ? <span><Check aria-hidden="true" className="size-4 text-verified" /><span className="sr-only">Выбрано в глубокую активацию</span></span>
                       : discovered
-                        ? <span className="text-xs font-bold text-verified">Узнано ✓</span>
+                        ? <span className="label-caps animate-fade-in inline-block rounded-[2px] border border-verified/50 px-1.5 py-0.5 text-verified [transform:rotate(-2deg)]">узнано</span>
                         : null}
                   </div>
                   <p lang="en" className="reading-en mt-2 text-[15px] font-semibold text-primary">{item.expression}</p>
@@ -351,7 +342,7 @@ export function DashboardPage() {
       </section>
 
       {/* 6 · ДВЕ КАРТОЧКИ-АНОНСА */}
-      <section aria-label="Перенос навыков и работа над ошибками" className="grid gap-4 sm:grid-cols-2">
+      <section aria-label="Перенос навыков и работа над ошибками" className="mt-4 grid gap-4 sm:grid-cols-2">
         <AnnounceCard
           to="/mission"
           icon={<Target className="size-5" />}
@@ -361,6 +352,7 @@ export function DashboardPage() {
         />
         <AnnounceCard
           to="/errors"
+          className="[transform:rotate(0.3deg)]"
           icon={<AlertCircle className="size-5" />}
           kicker="Персональная коррекция"
           title="Лаборатория ошибок"
@@ -368,7 +360,7 @@ export function DashboardPage() {
         />
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+      <section className="mt-9 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
         <Card>
           <CardHeader><div><p className="section-kicker">Ваша личная база</p><h2 className="card-title">Быстро сохранить слово</h2></div><Plus className="size-5 text-verified" aria-hidden="true" /></CardHeader>
           <CardBody>
@@ -411,11 +403,11 @@ function SimpleMetric({ value, label, divider, className }: { value: number; lab
   )
 }
 
-function AnnounceCard({ to, icon, kicker, title, note }: { to: string; icon: ReactNode; kicker: string; title: string; note: ReactNode }) {
+function AnnounceCard({ to, icon, kicker, title, note, className }: { to: string; icon: ReactNode; kicker: string; title: string; note: ReactNode; className?: string }) {
   return (
     <Link
       to={to}
-      className="lamp ink-underline group flex min-h-32 items-start gap-4 rounded-[3px] border border-border bg-surface p-5 shadow-[var(--lift-1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className={['lamp ink-underline group flex min-h-32 items-start gap-4 rounded-[2px] border border-border bg-elevated p-5 shadow-[var(--lift-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus', className ?? '[transform:rotate(-0.35deg)]'].join(' ')}
     >
       <span className="grid size-11 shrink-0 place-items-center rounded-[3px] border border-border bg-elevated text-secondary shadow-[var(--bevel-up)]">{icon}</span>
       <span className="min-w-0">
