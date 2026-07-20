@@ -103,14 +103,11 @@ describe('AppShell Russian service copy', () => {
 
     renderShell('/errors')
 
-    // The loader mock wraps the REAL implementation, so this genuinely dynamic-imports
-    // the whole 1.1 MB lexical catalog. waitFor's 1s default is a machine-speed bet, not
-    // a property of the behaviour under test — it lost roughly one run in four locally
-    // and would lose far more often on a 2-core CI runner, where a red test gates the
-    // release bundles. The assertion is unchanged; only the waiting budget is.
+    // This dynamic-imports the whole lexical catalog: the waiting budget comes from
+    // asyncUtilTimeout in src/test/setup.ts, not from a per-call-site override.
     await waitFor(() => {
       for (const level of levels) expect(loadLexicalCatalogLevel).toHaveBeenCalledWith(level)
       expect(reconcile).toHaveBeenCalledWith()
-    }, { timeout: 15_000 })
+    })
   })
 })
