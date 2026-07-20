@@ -1,0 +1,117 @@
+name: Release desktop bundles
+
+# Builds macOS (universal DMG, ad-hoc signed) and Windows (NSIS, unsigned) installers
+# and publishes them to a GitHub Release, so anyone can download them from a plain
+# link without a GitHub account. Windows installers cannot be cross-compiled from
+# macOS, so each platform builds on its own runner.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # required to create the release and upload assets
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-14
+            bundles: dmg
+            # Universal, so the DMG also runs on Intel Macs, not just Apple Silicon.
+            rust-target: aarch64-apple-darwin,x86_64-apple-darwin
+            extra-args: --target universal-apple-darwin
+          - platform: windows-latest
+            bundles: nsis
+            rust-target: x86_64-pc-windows-msvc
+            extra-args: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Version comes from package.json "packageManager", so CI and the local
+      # machine can never drift apart.
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          # Vite 8 requires ^20.19.0 || >=22.12.0.
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - name: Cache cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify (lint, tests, build)
+        run: pnpm check
+
+      - name: Rust tests
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml --all-targets
+
+      - name: Build bundle
+        run: pnpm tauri build --bundles ${{ matrix.bundles }} ${{ matrix.extra-args }}
+
+      - name: Collect installers
+        shell: bash
+        run: |
+          mkdir -p out
+          find src-tauri/target -type f \( -name '*.dmg' -o -name '*-setup.exe' \) -exec cp {} out/ \;
+          ls -lh out
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: english-forge-${{ matrix.platform }}
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    # Publishes to the Releases page so friends get a direct download link.
+    # Artifacts alone are not enough: they require a GitHub login and expire.
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-installers
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-installers/*
+          draft: false
+          generate_release_notes: true
+          body: |
+            ## Установка
+
+            Приложение работает полностью локально: ни аккаунта, ни интернета не нужно.
+            Все данные остаются на вашем компьютере.
+
+            **macOS** — скачайте `.dmg`, откройте, перетащите в Applications.
+            При первом запуске macOS скажет, что не может проверить разработчика:
+            нажмите правой кнопкой по приложению → **Открыть** → **Открыть**.
+            Это нужно один раз. Сборка universal — работает и на Apple Silicon, и на Intel.
+
+            **Windows** — скачайте `.exe`, запустите.
+            SmartScreen покажет синее окно: **Подробнее** → **Выполнить в любом случае**.
+            Тоже один раз.
+
+            Оба предупреждения появляются потому, что установщики не подписаны
+            платными сертификатами разработчика. Это не признак проблемы с файлом.

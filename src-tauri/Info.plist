@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>LSMinimumSystemVersion</key>
+  <string>11.0</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>English Forge records your voice only after you start a speaking exercise, so you can listen back and review your own practice.</string>
+  <key>NSScreenCaptureUsageDescription</key>
+  <string>English Forge captures a screen or window only after you start a local listening recording, so you can practise with system audio on this Mac.</string>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>English Forge captures system audio only after you start a local listening recording; the recording remains on this Mac.</string>
+</dict>
+</plist>

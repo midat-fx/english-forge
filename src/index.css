@@ -1,0 +1,469 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════
+   «ПРАВКА» — Proof Sheet.
+   Приложение — не дашборд, а корректурный оттиск под настольной лампой:
+   плотная тёплая бумага с настоящей толщиной, ОДИН источник света,
+   широкое поле для пометок, гравированный строкомер вместо прогресс-баров
+   и ровно две краски — красная правка редактора и зелёный штемпель.
+
+   Три сквозных правила, нарушение любого — регрессия:
+   1. Свет один и он сверху-слева. Ни одна тень в системе не симметрична;
+      симметричный ореол вокруг элемента и есть подпись «generic dashboard».
+   2. Рубрика (красный) НИКОГДА не маркирует ошибку пользователя. Только
+      «здесь вмешался редактор»: секционная метка, цель, правка, деструктив.
+   3. Ни одной бесконечной анимации. Пока в фокусе поле ввода или английский
+      текст — ничто в кадре не движется по таймеру, только по событию.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ─── ГАРНИТУРЫ. Только системные. Ноль @font-face, ноль сети. ─────── */
+
+  /* Русский интерфейс + ВСЕ дисплейные заголовки. Гротеск.
+     macOS → SF Pro. Win 11 → Segoe UI Variable Text. Win 10 → Segoe UI.
+     Полная кириллица во всех трёх, Light 300 и Bold 700 без синтеза. */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+               "Segoe UI Variable Text", "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+
+  /* Изучаемый английский — и ТОЛЬКО он. Латиница-only, поэтому отсутствие
+     кириллицы в этих гарнитурах безразлично: кириллическая ловушка антиквы
+     исчезает полностью. macOS → Iowan Old Style. Win → Palatino Linotype →
+     Book Antiqua → Georgia (гарантирована начиная с Windows 2000). */
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino,
+                "Book Antiqua", Charter, "Hoefler Text", Georgia,
+                "Times New Roman", serif;
+
+  /* Все числа и дроби. Win 7+ → Consolas гарантирована. */
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo,
+               "Cascadia Mono", "Cascadia Code", Consolas,
+               "Liberation Mono", monospace;
+
+  /* ─── ЦВЕТА. Имена сохранены, значения новые: ни один потребитель
+     токена не ломается, форж-имена становятся алиасами новых красок. ─── */
+  --color-canvas: var(--canvas);
+  --color-sidebar: var(--sidebar);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-input: var(--border-input);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-teal: var(--teal);
+  --color-teal-strong: var(--teal-strong);
+  --color-ember: var(--ember);
+  --color-ember-strong: var(--ember-strong);
+  --color-ember-text: var(--ember-text);
+  --color-amber: var(--amber);
+  --color-positive: var(--positive);
+  --color-danger: var(--danger);
+  --color-focus: var(--focus);
+  --color-ink: var(--ink);
+
+  /* Новые имена. Раньше -soft/-warm жили только на :root и до них
+     дотягивались через arbitrary values — теперь есть утилиты. */
+  --color-ink-warm: var(--ink-warm);
+  --color-recess: var(--recess);
+  --color-rubric: var(--rubric);
+  --color-rubric-soft: var(--rubric-soft);
+  --color-verified: var(--verified);
+  --color-verified-soft: var(--verified-soft);
+  --color-teal-soft: var(--verified-soft);
+  --color-ember-soft: var(--rubric-soft);
+  --color-paper-hi: var(--paper-hi);
+  --color-engrave: var(--engrave);
+
+  /* ─── РАДИУСЫ. Пять ad-hoc ступеней → три. Почти прямой угол — это
+     БУМАГА, а не таблетка: один из двух самых дешёвых носителей
+     новой идентичности. ─────────────────────────────────────────────── */
+  --radius-sheet: 3px;   /* листы, кнопки, поля, панели */
+  --radius-slip: 2px;    /* слипы, штемпели, мелкие метки */
+  --radius-pill: 999px;  /* ТОЛЬКО Badge и скроллбар */
+
+  /* ─── ТИПОГРАФСКАЯ ШКАЛА ────────────────────────────────────────────── */
+  --text-micro: 0.75rem;      /* 12px — ЖЁСТКИЙ ПОЛ для uppercase-меток:
+                                 11px + .14em трекинг на Windows при 125%
+                                 это не дизайн, это мелкий текст. */
+  --text-micro--line-height: 1.35;
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.5;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.6;
+  --text-lede: 1rem;
+  --text-lede--line-height: 1.65;
+  --text-read: 1.0625rem;     /* .reading-en в потоке */
+  --text-read--line-height: 1.62;
+  --text-readlg: 1.5rem;      /* реплика карточки, бриф задания */
+  --text-readlg--line-height: 1.45;
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.3;
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 1.25;
+  --text-h1: clamp(1.75rem, 1.1vw + 1.45rem, 2.125rem);
+  --text-h1--line-height: 1.18;
+  --text-display: clamp(2rem, 2.2vw + 1.45rem, 2.875rem);
+  --text-display--line-height: 1.08;
+
+  /* Три почти-одинаковых трекинга (.15em/.14em/.12em) → один. */
+  --tracking-label: 0.14em;
+
+  /* ─── МАГИЧЕСКИЕ ЧИСЛА ОБОЛОЧКИ, бывшие инлайном в двух местах ─────── */
+  --spacing-rail: 248px;   /* → w-rail, pl-rail */
+  --spacing-bar: 80px;     /* → h-bar, min-h-bar */
+  --spacing-bench: 1500px; /* → max-w-bench */
+  --spacing-margin: 12rem; /* колонка маргиналий (≥xl) */
+  --spacing-tap: 44px;     /* → min-h-tap; пол WCAG 2.2 AA target size */
+
+  /* ─── КРИВЫЕ ────────────────────────────────────────────────────────── */
+  --ease-paper: cubic-bezier(0.16, 1, 0.30, 1);
+  --ease-press: cubic-bezier(0.20, 0.90, 0.25, 1);
+}
+
+/* ══════════════════ ТЁМНАЯ ТЕМА — «ночная корректура» ══════════════════
+   По умолчанию (тёмная = отсутствие класса .light).
+   Контрасты посчитаны к --surface #1C1917 — к реальному фону под текстом,
+   а не к canvas. В системе нет полупрозрачных поверхностей под текстом и
+   нет backdrop-filter нигде, кроме оверлея Dialog, поэтому эти ratio
+   реальные, а не номинальные.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: dark;
+
+  /* Поверхности: тёплый графит-краска, НЕ сине-серый slate. */
+  --canvas:        #14120F;  /* стол под листом */
+  --sidebar:       #100E0C;  /* боковое поле, глубже стола */
+  --surface:       #1C1917;  /* ЛИСТ (leaf) — уровень 1 */
+  --elevated:      #262220;  /* СЛИП (slip) — уровень 2, наклеен сверху */
+  --recess:        #0E0C0A;  /* ВРЕЗКА — вырезано в листе: поля ввода, гнёзда */
+
+  /* Свет: ОДИН источник, сверху-слева. */
+  --paper-hi:      rgba(255, 238, 214, 0.055); /* верхняя кромка листа */
+  --lamp-hi:       rgba(255, 238, 214, 0.115); /* блик при hover: «лампа ближе» */
+  --engrave:       rgba(0, 0, 0, 0.62);        /* нижняя кромка / тень нажатия */
+
+  --border:        #2E2926;  /* волосяная линейка */
+  --border-strong: #463F3A;  /* отточие, деления шкалы */
+  --border-input:  #8A7C6E;  /* 4.72:1 к --recess · AA non-text ✓ */
+
+  /* Текст */
+  --primary:       #F0EAE0;  /* 14.47:1 к surface · AAA */
+  --secondary:     #B8AEA2;  /*  7.93:1 к surface · AAA */
+  --muted:         #96897B;  /*  5.08:1 к surface · AA — разрешён от 12px */
+
+  /* ─── КРАСКА 1: РУБРИКА (красная правка редактора).
+     НИКОГДА не означает ошибку пользователя. */
+  --rubric:        #E8705C;  /*  5.69:1 к surface · AA */
+  --rubric-soft:   rgba(232, 112, 92, 0.14);
+
+  /* ─── КРАСКА 2: ШТЕМПЕЛЬ (зелёный «принято / сдано»). */
+  --verified:      #8FBE7A;  /*  8.08:1 к surface · AAA */
+  --verified-soft: rgba(143, 190, 122, 0.13);
+
+  /* ─── ФОКУС выведен из цветовой семантики вовсе: максимально-контрастный
+     нейтрал, инверсия темы. Никогда не путается ни с одной из красок. */
+  --focus:         #F7F1E6;  /* 15.40:1 к surface · AAA */
+
+  /* On-colors для заливок */
+  --ink:           #0E1109;  /*  8.89:1 на --verified · AAA */
+  --ink-warm:      #1A0D08;  /*  6.25:1 на --rubric · AA */
+
+  /* ─── АЛИАСЫ СТАРЫХ ИМЁН: позволяют CVA-таблицам и страницам работать
+     без правок, пока миграция идёт по одному файлу. ─────────────────── */
+  --teal:          var(--verified);
+  --teal-strong:   #A6D092;  /* hover в тёмной теме = СВЕТЛЕЕ */
+  --teal-soft:     var(--verified-soft);
+  --ember:         var(--rubric);
+  --ember-strong:  #F28E7B;
+  --ember-text:    var(--rubric);
+  --ember-soft:    var(--rubric-soft);
+  --amber:         #E4C089;  /* 10.06:1 к surface · «в работе / новое» */
+  --positive:      var(--verified);
+  --danger:        var(--rubric); /* деструктив отличается ЗАЛИВКОЙ, не оттенком */
+}
+
+/* ══════════════════ СВЕТЛАЯ ТЕМА — «бумага верже днём» ═════════════════
+   Не инверсия, а другой материал: тёплая тонированная бумага под лампой.
+   Сохранена смысловая инверсия: в тёмной теме -strong СВЕТЛЕЕ базы
+   (hover = осветлить), в светлой ТЕМНЕЕ (hover = затемнить).
+   ═══════════════════════════════════════════════════════════════════════ */
+:root.light {
+  color-scheme: light;
+
+  --canvas:        #EDE8DE;
+  --sidebar:       #E5DFD3;
+  --surface:       #FAF7F0;
+  --elevated:      #F2EDE3;
+  --recess:        #E4DED2;
+
+  --paper-hi:      rgba(255, 255, 255, 0.92);
+  --lamp-hi:       rgba(255, 255, 255, 1);
+  --engrave:       rgba(40, 30, 20, 0.13);
+
+  --border:        #D8D0C2;
+  --border-strong: #B3A997;
+  --border-input:  #75695A;  /* 3.99:1 к --recess ✓ */
+
+  --primary:       #1A1714;  /* 16.53:1 к surface · AAA */
+  --secondary:     #4A423A;  /*  9.21:1 к surface · AAA */
+  --muted:         #6B6157;  /*  5.65:1 к surface · AA */
+
+  --rubric:        #A32E19;  /*  6.62:1 к surface · AA */
+  --rubric-soft:   rgba(163, 46, 25, 0.09);
+  --verified:      #2E6B36;  /*  6.00:1 к surface · AA */
+  --verified-soft: rgba(46, 107, 54, 0.10);
+
+  --focus:         #1A1714;  /* 16.53:1 · инверсия темы, как и в тёмной */
+
+  --ink:           #FFFFFF;  /*  6.42:1 на --verified · AA */
+  --ink-warm:      #FFFFFF;  /*  7.09:1 на --rubric · AA */
+
+  --teal:          var(--verified);
+  --teal-strong:   #1F5028;
+  --teal-soft:     var(--verified-soft);
+  --ember:         var(--rubric);
+  --ember-strong:  #85220F;
+  --ember-text:    var(--rubric);
+  --ember-soft:    var(--rubric-soft);
+  --amber:         #7A5210;  /* 6.44:1 к surface · AA */
+  --positive:      var(--verified);
+  --danger:        var(--rubric);
+}
+
+/* ══════════════════ ВЫСОТА И СВЕТ ══════════════════════════════════════
+   Три уровня + врезка. Контактная тень + рассеянная. Кромочный рельеф даёт
+   миллиметровую толщину материала за ноль стоимости.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --bevel-up:   inset 0 1px 0 0 var(--paper-hi),
+                inset 0 -1px 0 0 var(--engrave);
+  --bevel-down: inset 0 1px 3px 0 var(--engrave),
+                inset 0 -1px 0 0 var(--paper-hi);
+  --bevel-lamp: inset 0 1px 0 0 var(--lamp-hi),
+                inset 0 -1px 0 0 var(--engrave);
+
+  --lift-1: var(--bevel-up),
+            0 1px 1px -1px rgba(0, 0, 0, 0.42),
+            0 10px 26px -20px rgba(0, 0, 0, 0.60);   /* ЛИСТ */
+  --lift-2: var(--bevel-up),
+            0 2px 3px -2px rgba(0, 0, 0, 0.46),
+            0 18px 40px -26px rgba(0, 0, 0, 0.68);   /* СЛИП */
+  --lift-2-lamp: var(--bevel-lamp),
+            0 2px 3px -2px rgba(0, 0, 0, 0.46),
+            0 18px 40px -26px rgba(0, 0, 0, 0.68);   /* СЛИП под лампой */
+  --lift-3: var(--bevel-up),
+            0 4px 8px -4px rgba(0, 0, 0, 0.50),
+            0 40px 88px -48px rgba(0, 0, 0, 0.80);   /* ДИАЛОГ */
+  --press:  var(--bevel-down);                        /* нажатая клавиша */
+}
+:root.light {
+  --lift-1: var(--bevel-up),
+            0 1px 1px -1px rgba(40, 30, 20, 0.10),
+            0 10px 24px -20px rgba(40, 30, 20, 0.20);
+  --lift-2: var(--bevel-up),
+            0 2px 3px -2px rgba(40, 30, 20, 0.12),
+            0 18px 38px -26px rgba(40, 30, 20, 0.24);
+  --lift-2-lamp: var(--bevel-lamp),
+            0 2px 3px -2px rgba(40, 30, 20, 0.12),
+            0 18px 38px -26px rgba(40, 30, 20, 0.24);
+  --lift-3: var(--bevel-up),
+            0 4px 8px -4px rgba(40, 30, 20, 0.14),
+            0 40px 84px -48px rgba(40, 30, 20, 0.30);
+}
+
+/* ══════════════════ БАЗОВЫЙ СЛОЙ ══════════════════════════════════════ */
+* { box-sizing: border-box; }
+html { min-width: 320px; background: var(--canvas); font-synthesis: none; text-rendering: optimizeLegibility; }
+body { margin: 0; min-width: 320px; min-height: 100vh; min-height: 100dvh; background: var(--canvas); font-family: var(--font-sans); }
+button, input, textarea, select { font: inherit; }
+
+/* .reading-en — 66 употреблений, самый важный класс системы.
+   ОСТАЁТСЯ ВНЕ ВСЕХ @layer: Tailwind 4 кладёт всё в слои, а безслойный CSS
+   бьёт слойный независимо от специфичности. Иначе безслойный ресет
+   `button, input, textarea, select { font: inherit }` выше победит, и
+   английская антиква молча исчезнет из кнопок-вариантов и <textarea>.
+   Если этот класс оказался внутри @layer — это регрессия, откатить.
+   Класс МИНИМАЛЬНЫЙ: он висит на кнопках, на span внутри строк и на
+   textarea, поэтому не несёт ни меры, ни фона, ни отступов. */
+.reading-en { font-family: var(--font-serif); font-feature-settings: "liga" 1, "kern" 1; letter-spacing: 0.005em; line-height: 1.62; }
+/* Мера строки — отдельный класс, только для абзацных контекстов. Ширина
+   колонки, а не кегль, — главный фактор нефатигующего чтения за 40 минут. */
+.reading-en-block { max-inline-size: 66ch; }
+
+button, a, input, textarea, select, summary { touch-action: manipulation; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+::selection { background: var(--rubric-soft); color: var(--primary); }
+
+:where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: var(--radius-pill); background-clip: padding-box; background-color: var(--border-strong); }
+html { scrollbar-color: var(--border-strong) transparent; } /* Firefox-путь */
+
+/* Единый капительный регистр. font-variant-caps: small-caps НЕ используется
+   нигде: `font-synthesis: none` выше сбрасывает синтез капители, а настоящих
+   small-cap глифов нет ни у одного системного гротеска — регистр молча
+   отрендерился бы строчными. uppercase + трекинг честнее.
+   Объявлен через @utility, а не как класс в @layer: в Tailwind 4 `@apply`
+   принимает только утилиты, поэтому три производных класса ниже иначе не
+   собираются (сборка падает с «Cannot apply unknown utility class»). */
+@utility label-caps {
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  line-height: 1.35;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+@layer components {
+  /* Имена сохранены — 34 и 12 употреблений соответственно.
+     Кикер красный: это и есть рубрикация в исходном смысле — заголовок,
+     вынесенный красным. Безопасно ровно потому, что рубрика никогда не
+     маркирует провал пользователя. */
+  .section-kicker  { @apply label-caps; color: var(--rubric); }
+  .inspector-label { @apply label-caps; color: var(--muted); }
+  .metric-label    { @apply label-caps; color: var(--muted); margin-top: 0.125rem; }
+
+  .card-title { margin-top: 0.25rem; font-size: var(--text-h3); font-weight: 600; letter-spacing: -0.005em; color: var(--primary); }
+  .metric-value { font-family: var(--font-mono); font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; color: var(--primary); font-variant-numeric: tabular-nums slashed-zero; }
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; padding: 2.5rem 1.5rem; text-align: center; font-size: var(--text-body); line-height: 1.6; color: var(--muted); }
+  kbd { border-radius: var(--radius-slip); border: 1px solid var(--border); background: var(--elevated); box-shadow: var(--bevel-up); padding: 0.125rem 0.375rem; font-family: var(--font-mono); font-size: 0.6875rem; color: var(--secondary); }
+
+  /* Каждое число в приложении: моно + табличные цифры. Без tabular-nums
+     счётчик практики дёргается при каждой смене карточки — 30 раз за сессию. */
+  .numeral { font-family: var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
+
+  /* «Набор под стеклом»: английский физически лежит в другом слое бумаги —
+     врезан в лист. Бриф задания, реплика карточки, пример/исправление. */
+  .set-text {
+    background: var(--recess);
+    box-shadow: var(--bevel-down);
+    border-radius: var(--radius-sheet);
+    border-inline-start: 2px solid var(--rubric);
+    padding: 0.875rem 1.125rem;
+  }
+
+  /* Двойная линейка — фрезерованный стык вместо простого бордюра. */
+  .rule-double { border-bottom: 1px solid var(--border); box-shadow: 0 1px 0 var(--paper-hi); }
+}
+
+/* ══════════════════ СИСТЕМА ДВИЖЕНИЯ ═══════════════════════════════════
+   Ни одной бесконечной анимации. Ноль исключений: даже «текущий шаг»
+   статичен. Бюджет движения инвертирован — раньше угольки дрейфовали на
+   простаивающем дашборде, а цикл ответа в практике был мгновенным свопом.
+
+   ГАШЕНИЕ ТРЁХСЛОЙНОЕ, и каждый слой существует по конкретной причине:
+   СЛОЙ 1 — множитель --motion для авторских длительностей: calc(240ms * 0)
+            = 0ms, состояние применяется мгновенно и корректно.
+   СЛОЙ 2 — два !important-блока ниже. НЕ УДАЛЯТЬ. Они единственное, что
+            перекрывает Tailwind-утилиты transition- и duration-, расставленные
+            по компонентам. Да, это дубль тела правил; «элегантный» вариант
+            без препроцессора молча пропускает часть анимаций.
+   СЛОЙ 3 — JS-страж motionScale() в src/lib/motion.ts.
+
+   ЖЕЛЕЗНОЕ ПРАВИЛО: ни один обработчик не подписывается на transitionend /
+   animationend. Всё, что происходит после анимации, идёт через
+   setTimeout(fn, DUR * motionScale()) — при 0 это следующий тик, без
+   зависаний. 0ms-transition не выстреливает transitionend вовсе.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root { --motion: 1; }
+@media (prefers-reduced-motion: reduce) { :root { --motion: 0; } }
+:root.reduce-motion { --motion: 0; }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade-in { animation: fade-in calc(160ms * var(--motion)) ease-out; }
+
+/* 4. sheet-in — лист лёг. Вход маршрута и вход контента.
+   БЕЗ blur (блюр на серифе даёт кашу), БЕЗ горизонтального сдвига, БЕЗ 3D.
+   Обязательно `transform: none` в покое, НЕ translateZ(0): постоянный
+   трансформ заставляет WKWebView держать поддерево растрированным, и
+   английская антиква теряет резкость — смертельно для инструмента чтения. */
+@keyframes sheet-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.sheet-in { animation: sheet-in calc(320ms * var(--motion)) var(--ease-paper) backwards; }
+
+/* Dialog needs its own keyframe: it is centred with a translate, so it must
+   NOT animate to `transform: none` the way a sheet in normal flow does. */
+@keyframes dialog-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
+.dialog-in { animation: dialog-in calc(320ms * var(--motion)) var(--ease-paper) backwards; }
+
+/* 5. card-turn — самая ценная анимация приложения: 15–30 раз за занятие.
+   Лист снимают со стопки и кладут следующий. Единственное место с настоящей
+   перспективой во всём приложении (контейнер несёт .card-stage). */
+.card-stage { perspective: 1200px; }
+@keyframes card-out { from { opacity: 1; transform: translateY(0) rotateX(0deg); } to { opacity: 0; transform: translateY(-8px) rotateX(2deg); } }
+@keyframes card-in { from { opacity: 0; transform: translateY(10px) rotateX(-1.5deg); } to { opacity: 1; transform: none; } }
+.card-out { animation: card-out calc(140ms * var(--motion)) var(--ease-press) both; pointer-events: none; }
+.card-in { animation: card-in calc(240ms * var(--motion)) var(--ease-paper) backwards; }
+
+/* 6. strike — перечёркивание колонцифры. SVG stroke-dashoffset. */
+@keyframes strike { from { stroke-dashoffset: var(--dash, 40); } to { stroke-dashoffset: 0; } }
+.strike-draw { stroke-dasharray: var(--dash, 40); animation: strike calc(320ms * var(--motion)) var(--ease-paper) both; }
+
+/* 7. leader-draw — выносная линейка корректора, тот же приём. */
+@keyframes leader { from { stroke-dashoffset: var(--dash, 200); } to { stroke-dashoffset: 0; } }
+.leader-draw { stroke-dasharray: var(--dash, 200); animation: leader calc(420ms * var(--motion)) var(--ease-paper) calc(160ms * var(--motion)) both; }
+
+/* 8. settle — слип прижимается: подтверждение цели в задании на перенос. */
+@keyframes settle { from { transform: rotate(var(--slip-turn, -0.35deg)); } to { transform: rotate(0deg); } }
+.settle { animation: settle calc(260ms * var(--motion)) var(--ease-paper) both; }
+
+/* 9. typeset — перенабор счётчика. */
+@keyframes typeset { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.typeset { animation: typeset calc(300ms * var(--motion)) var(--ease-paper) backwards; }
+
+/* Механическое «не защёлкнулось» — НЕ тревога. Амплитуда 3px, один такт. */
+@keyframes nudge { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-3px); } 70% { transform: translateX(3px); } }
+.nudge { animation: nudge calc(140ms * var(--motion)) var(--ease-press) both; }
+
+/* STAGGER — только первые 8 элементов списка. При --motion: 0 все задержки
+   схлопываются в 0 арифметически. */
+.stagger > * { animation-delay: calc(var(--i, 0) * 40ms * var(--motion)); }
+
+/* 1. press (детент) — нажатие любой клавиши. Тактильность нажатия не
+   является «движением» в вестибулярном смысле, поэтому под reduced-motion
+   визуальный отклик СОХРАНЯЕТСЯ, обнуляется только длительность: убрать
+   его значило бы наказать пользователя мёртвым интерфейсом. */
+.detent { transition: transform calc(90ms * var(--motion)) var(--ease-press), box-shadow calc(160ms * var(--motion)) var(--ease-paper); }
+.detent:active:not(:disabled) { transform: translateY(1px); box-shadow: var(--press); }
+
+/* 2. underline — растущая чернильная линейка. ЭТО И ЕСТЬ «ПОДСВЕТКА
+   КНОПКИ»: композитится без layout, читается мгновенно, не даёт гало. */
+.ink-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: 0% 1px;
+  transition: background-size calc(180ms * var(--motion)) var(--ease-paper);
+}
+.ink-underline:hover:not(:disabled), .ink-underline:focus-visible { background-size: 100% 1px; }
+
+/* 3. lamp — блик лампы: верхняя кромка разгорается, лист поднимается. */
+.lamp { transition: box-shadow calc(160ms * var(--motion)) var(--ease-paper), background-color calc(160ms * var(--motion)) var(--ease-paper); }
+.lamp:hover, .lamp:focus-visible, .lamp:focus-within { box-shadow: var(--lift-2-lamp); }
+
+/* Штриховка интервального ожидания: закрытая крышка, а не сломанный
+   контрол. Статична, ноль анимации. */
+.hatched { background-image: repeating-linear-gradient(45deg, transparent 0 6px, var(--border) 6px 7px); }
+
+/* СЛОЙ 2 — не удалять, см. комментарий выше. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+:root.reduce-motion *, :root.reduce-motion *::before, :root.reduce-motion *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
