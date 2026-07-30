@@ -111,8 +111,8 @@ describe('daily practice queue', () => {
   it("prioritizes today's current-level assignment over older new phrases", () => {
     const data = createSeedData()
     const now = new Date(2026, 6, 20, 12)
-    const oldPhrases = Array.from({ length: 10 }, (_, index) => { const phrase = { ...data.phrases[index % data.phrases.length], id: `old-${index}`, status: 'new' as const, cefr: 'B1' as const, tags: [], activationStage: 8 as const }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
-    const dailyPhrases = Array.from({ length: 10 }, (_, index) => { const phrase = { ...data.phrases[index % data.phrases.length], id: `daily-${index}`, status: 'new' as const, cefr: 'B1' as const, tags: [catalogItemTag(`catalog-${index}`)], activationStage: 8 as const }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
+    const oldPhrases = Array.from({ length: 10 }, (_, index) => { const phrase = { ...data.phrases[index % data.phrases.length], id: `old-${index}`, status: 'new' as const, cefr: 'B1' as const, tags: [], activationStage: 8 as const, createdAt: '2026-07-01T08:00:00.000Z' }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
+    const dailyPhrases = Array.from({ length: 10 }, (_, index) => { const phrase = { ...data.phrases[index % data.phrases.length], id: `daily-${index}`, status: 'new' as const, cefr: 'B1' as const, tags: [catalogItemTag(`catalog-${index}`)], activationStage: 8 as const, createdAt: '2026-07-01T08:00:00.000Z' }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
     const states = [
       ...oldPhrases.map((phrase) => ({ ...initialSkillState(phrase.id, 'meaning_recall', now), dueAt: new Date(now.getTime() - 60_000).toISOString() })),
       ...dailyPhrases.map((phrase) => initialSkillState(phrase.id, 'meaning_recall', now)),
@@ -125,8 +125,8 @@ describe('daily practice queue', () => {
   it("keeps today's enrolled learning cards first in a short session after reload", () => {
     const data = createSeedData()
     const now = new Date(2026, 6, 20, 12)
-    const older = Array.from({ length: 5 }, (_, index) => { const phrase = { ...data.phrases[index], id: `overdue-${index}`, status: 'learning' as const, tags: [], activationStage: 8 as const }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
-    const daily = Array.from({ length: 5 }, (_, index) => { const phrase = { ...data.phrases[index], id: `daily-learning-${index}`, status: 'learning' as const, tags: [catalogItemTag(`daily-catalog-${index}`)], activationStage: 8 as const }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
+    const older = Array.from({ length: 5 }, (_, index) => { const phrase = { ...data.phrases[index], id: `overdue-${index}`, status: 'learning' as const, tags: [], activationStage: 8 as const, createdAt: '2026-07-01T08:00:00.000Z' }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
+    const daily = Array.from({ length: 5 }, (_, index) => { const phrase = { ...data.phrases[index], id: `daily-learning-${index}`, status: 'learning' as const, tags: [catalogItemTag(`daily-catalog-${index}`)], activationStage: 8 as const, createdAt: '2026-07-01T08:00:00.000Z' }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
     const states = [
       ...older.map((phrase) => ({ ...initialSkillState(phrase.id, 'meaning_recall', now), dueAt: new Date(now.getTime() - 86_400_000).toISOString() })),
       ...daily.map((phrase) => initialSkillState(phrase.id, 'meaning_recall', now)),
@@ -144,8 +144,8 @@ describe('daily practice queue', () => {
   it("does not introduce a second batch after today's ten become learning cards", () => {
     const data = createSeedData()
     const now = new Date(2026, 6, 20, 12)
-    const daily = Array.from({ length: 10 }, (_, index) => { const phrase = { ...data.phrases[index % data.phrases.length], id: `daily-reviewed-${index}`, status: 'learning' as const, tags: [catalogItemTag(`daily-reviewed-catalog-${index}`)], activationStage: 8 as const }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
-    const extraNew = Array.from({ length: 10 }, (_, index) => { const phrase = { ...data.phrases[index % data.phrases.length], id: `extra-new-${index}`, status: 'new' as const, tags: [], activationStage: 8 as const }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
+    const daily = Array.from({ length: 10 }, (_, index) => { const phrase = { ...data.phrases[index % data.phrases.length], id: `daily-reviewed-${index}`, status: 'learning' as const, tags: [catalogItemTag(`daily-reviewed-catalog-${index}`)], activationStage: 8 as const, createdAt: '2026-07-01T08:00:00.000Z' }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
+    const extraNew = Array.from({ length: 10 }, (_, index) => { const phrase = { ...data.phrases[index % data.phrases.length], id: `extra-new-${index}`, status: 'new' as const, tags: [], activationStage: 8 as const, createdAt: '2026-07-01T08:00:00.000Z' }; return { ...phrase, activationEvents: activationEventsThroughSix(phrase) } })
     const states = [...daily, ...extraNew].map((phrase) => initialSkillState(phrase.id, 'meaning_recall', now))
     const assignment = {
       dayKey: localDayKey(now), level: data.preferences.currentLevel,

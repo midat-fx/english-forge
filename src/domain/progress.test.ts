@@ -57,7 +57,7 @@ describe('honest progress metrics', () => {
   it('counts the Voice-only spoken lane in visible review debt', () => {
     const data = createSeedData()
     const now = new Date('2026-07-20T12:00:00.000Z')
-    const phrase = { ...data.phrases[0], activationStage: 7 as const }
+    const phrase = { ...data.phrases[0], activationStage: 7 as const, createdAt: '2026-07-01T08:00:00.000Z' }
     phrase.activationEvents = qualifiedEventsThrough(phrase, 6)
     data.phrases = [phrase]
     data.skillStates = [
@@ -70,7 +70,7 @@ describe('honest progress metrics', () => {
 
   it('requires two spaced productive recalls and the complete activation cycle for provisional status', () => {
     const data = createSeedData()
-    data.phrases[0] = { ...data.phrases[0], activationStage: 8, activationUpdatedAt: '2026-07-18T07:00:00.000Z' }
+    data.phrases[0] = { ...data.phrases[0], activationStage: 8, activationUpdatedAt: '2026-07-18T07:00:00.000Z', createdAt: '2026-07-01T08:00:00.000Z' }
     const now = new Date('2026-07-18T12:00:00.000Z')
     data.reviews.push(
       validProductiveReview(data.reviews[0], data.phrases[0], 'extra-1', '2026-07-17T08:00:00.000Z'),
@@ -81,7 +81,7 @@ describe('honest progress metrics', () => {
 
   it('accepts a confirmed Mission as optional productive-transfer evidence', () => {
     const data = createSeedData()
-    data.phrases[0] = { ...data.phrases[0], cefr: 'A2', activationStage: 8, activationUpdatedAt: '2026-07-18T07:00:00.000Z' }
+    data.phrases[0] = { ...data.phrases[0], cefr: 'A2', activationStage: 8, activationUpdatedAt: '2026-07-18T07:00:00.000Z', createdAt: '2026-07-01T08:00:00.000Z' }
     data.phrases[0].activationEvents = qualifiedEventsThrough(data.phrases[0], 5)
     data.reviews.push(validProductiveReview(data.reviews[0], data.phrases[0], 'mission-alt-1', '2026-07-17T08:00:00.000Z'))
     data.missions[0] = validCompletedMission(data.missions[0], data.phrases[0], '2026-07-17T12:00:00.000Z', '2026-07-18T09:00:00.000Z')
@@ -91,7 +91,7 @@ describe('honest progress metrics', () => {
   it('requires an explicit unsupported flag on written productive reviews', () => {
     const data = createSeedData()
     const phraseId = data.phrases[0].id
-    data.phrases[0] = { ...data.phrases[0], activationStage: 8, activationUpdatedAt: '2026-07-16T08:00:00.000Z' }
+    data.phrases[0] = { ...data.phrases[0], activationStage: 8, activationUpdatedAt: '2026-07-16T08:00:00.000Z', createdAt: '2026-07-01T08:00:00.000Z' }
     const base = data.reviews[0]
     data.missions = []
     data.reviews = [
@@ -111,7 +111,7 @@ describe('honest progress metrics', () => {
 
   it('excludes a written review contaminated by another same-phrase review inside twelve hours', () => {
     const data = createSeedData()
-    const phrase = { ...data.phrases[0], activationStage: 8, activationUpdatedAt: '2026-07-18T09:00:00.000Z', practiceExposures: undefined }
+    const phrase = { ...data.phrases[0], activationStage: 8, activationUpdatedAt: '2026-07-18T09:00:00.000Z', practiceExposures: undefined, createdAt: '2026-07-01T08:00:00.000Z' }
     const written = validProductiveReview(data.reviews[0], phrase, 'written-after-exposure', '2026-07-18T09:00:00.000Z')
     const priorMeaning = {
       ...written,
@@ -154,7 +154,7 @@ describe('honest progress metrics', () => {
   it('does not count legacy or supported Missions as productive transfer', () => {
     const data = createSeedData()
     const phraseId = data.phrases[0].id
-    data.phrases[0] = { ...data.phrases[0], cefr: 'A2', activationStage: 5 }
+    data.phrases[0] = { ...data.phrases[0], cefr: 'A2', activationStage: 5, createdAt: '2026-07-01T08:00:00.000Z' }
     data.phrases[0].activationEvents = qualifiedEventsThrough(data.phrases[0], 5)
     data.reviews = []
     data.missions[0] = { ...validCompletedMission(data.missions[0], data.phrases[0], '2026-07-17T12:00:00.000Z', '2026-07-18T09:00:00.000Z'), supportUsed: undefined }
