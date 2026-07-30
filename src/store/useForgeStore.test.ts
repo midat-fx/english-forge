@@ -1476,9 +1476,9 @@ describe('forge store transactions', () => {
     useForgeStore.setState((state) => ({
       speakingAttempts: [later, first],
       phrases: state.phrases.map((phrase) => phrase.id === phraseId ? {
-        ...phrase, activationStage: 8, activationUpdatedAt: '2026-07-17T21:00:00.000Z',
+        ...phrase, activationStage: 8, activationUpdatedAt: '2026-07-17T21:00:00.000Z', createdAt: '2026-07-01T08:00:00.000Z',
         activationEvents: [
-          ...qualifiedEventsThrough(phrase, 6),
+          ...qualifiedEventsThrough({ ...phrase, createdAt: '2026-07-01T08:00:00.000Z' }, 6),
           { stage: 7 as const, completedAt: first.createdAt, evidenceId: first.id },
           { stage: 8 as const, completedAt: '2026-07-17T21:00:00.000Z', evidenceId: 'delayed-review' },
         ],

@@ -683,7 +683,7 @@ describe('profile portability', () => {
   it('downgrades imported Stage 8 when another same-phrase review exposed the answer minutes earlier', () => {
     const buildStageEightProfile = (includePriorExposure: boolean) => {
       const data = createSeedData()
-      const original = data.phrases[0]
+      const original = { ...data.phrases[0], createdAt: '2026-07-01T08:00:00.000Z' }
       const phraseId = original.id
       const stageSevenAt = '2026-07-17T08:00:00.000Z'
       const writtenAt = '2026-07-18T09:00:00.000Z'
